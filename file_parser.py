@@ -1,7 +1,7 @@
 from area import StartZone, EndZone, Connection, SpecialZone
 
 
-def parser(filename: str) -> list[Zone | Connection  | Connection:
+def parser(filename: str) -> list[StartZone | EndZone | Connection | SpecialZone]:
     graph = []
     with open(filename, "r") as file:
         for line in file:
