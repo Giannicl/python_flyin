@@ -21,8 +21,8 @@ class Zone:
 
 
 class Connection:
-    def __init__(self, name: str, zone1: Zone, zone2: Zone, max_links: int = 1) -> None:
-        self.name: str = name
+    def __init__(self, id: int, zone1: Zone, zone2: Zone, max_links: int = 1) -> None:
+        self.id_digit: str = str(id)
         self.zone1: Zone = zone1
         self.zone2: Zone = zone2
         self.max_link_capacity: int = max_links
@@ -37,7 +37,7 @@ class Graph:
         if isinstance(element, Zone):
             self.zones[element.name] = element
         elif isinstance(element, Connection):
-            self.connections[element.name] = element
+            self.connections[element.id_digit] = element
 
     def find_zone(self, zone_name: str) -> Zone | None:
         return self.zones.get(zone_name)
