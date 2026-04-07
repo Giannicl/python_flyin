@@ -19,6 +19,12 @@ class Zone:
         self.color: str = color
         self.max_drones: int = max_drones
 
+    def __str__(self) -> str:
+        return f"Zone_name: {self.name}, type: {self.zone_type}, coords: ({self.xaxis}, {self.yaxis})"
+
+    def __repr__(self) -> str:
+        return f"Zone_name: {self.name}, type: {self.zone_type}, coords: ({self.xaxis}, {self.yaxis})"
+
 
 class Connection:
     def __init__(self, id: int, zone1: Zone, zone2: Zone, max_links: int = 1) -> None:
@@ -27,11 +33,18 @@ class Connection:
         self.zone2: Zone = zone2
         self.max_link_capacity: int = max_links
 
+    def __str__(self) -> str:
+        return f"Zone 1: {self.zone1} and Zone 2: {self.zone2}"
+
+    def __rep__(self) -> str:
+        return f"Zone 1: {self.zone1} and Zone 2: {self.zone2}"
+
 
 class Graph:
     def __init__(self) -> None:
         self.zones: Dict[str, Zone] = {}
         self.connections: Dict[str, Connection] = {}
+        self.nb_drones: int = 0
 
     def create_graph(self, element: Zone | Connection) -> None:
         if isinstance(element, Zone):
