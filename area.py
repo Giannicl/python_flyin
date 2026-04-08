@@ -27,17 +27,17 @@ class Zone:
 
 
 class Connection:
-    def __init__(self, id: int, zone1: Zone, zone2: Zone, max_links: int = 1) -> None:
-        self.id_digit: str = str(id)
+    def __init__(self, id: str, zone1: Zone, zone2: Zone, max_links: int = 1) -> None:
+        self.id_digit: str = id
         self.zone1: Zone = zone1
         self.zone2: Zone = zone2
         self.max_link_capacity: int = max_links
 
     def __str__(self) -> str:
-        return f"Zone 1: {self.zone1} and Zone 2: {self.zone2}"
+        return f"Zone 1: {self.zone1}, Zone 2: {self.zone2}, max_link_capacity: {self.max_link_capacity}"
 
-    def __rep__(self) -> str:
-        return f"Zone 1: {self.zone1} and Zone 2: {self.zone2}"
+    def __repr__(self) -> str:
+        return f"Zone 1: {self.zone1}, Zone 2: {self.zone2}, max_link_capacity: {self.max_link_capacity}"
 
 
 class Graph:
