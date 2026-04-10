@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 
 
 class Zone:
@@ -24,11 +24,16 @@ class Zone:
 
     def __repr__(self) -> str:
         return f"Zone_name: {self.name}, type: {self.zone_type}, coords: ({self.xaxis}, {self.yaxis})"
+    
+    def __lt__(self, other: "Zone") -> bool:
+        return self.name < other.name
+
+
 
 
 class Connection:
     def __init__(self, id: str, zone1: Zone, zone2: Zone, max_links: int = 1) -> None:
-        self.id_digit: str = id
+        self.id_name: str = id
         self.zone1: Zone = zone1
         self.zone2: Zone = zone2
         self.max_link_capacity: int = max_links
@@ -50,10 +55,18 @@ class Graph:
         if isinstance(element, Zone):
             self.zones[element.name] = element
         elif isinstance(element, Connection):
-            self.connections[element.id_digit] = element
+            self.connections[element.id_name] = element
 
     def find_zone(self, zone_name: str) -> Zone | None:
         return self.zones.get(zone_name)
 
-    def find_connection(self, connection_name: str) -> Connection | None:
-        return self.connections.get(connection_name)
+    def find_connection(self, connection_id: str) -> Connection | None:
+        return self.connections.get(connection_id)
+
+    def find_neighbours(self, zone_name: str) -> List[Zone]:
+        neighbours: List = []
+        for id_name in self.connections:
+            parts = id_name.split("-")
+            if zone_name == parts[0] or zone_name == parts[1]:
+                neighbours.append(self.zones[parts[0]] if parts[0] != zone_name else self.zones[parts[1]])                                   
+        return neighbours
