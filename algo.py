@@ -1,5 +1,5 @@
 from file_parser import parser
-from area import Graph, Zone
+from models import Graph, Zone
 from typing import List, Dict, Tuple 
 from heapq import heappush, heappop
 from random import choice

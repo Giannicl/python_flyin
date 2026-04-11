@@ -1,4 +1,5 @@
 from typing import Dict, Optional, List
+from collections import deque
 
 
 class Zone:
@@ -70,3 +71,21 @@ class Graph:
             if zone_name == parts[0] or zone_name == parts[1]:
                 neighbours.append(self.zones[parts[0]] if parts[0] != zone_name else self.zones[parts[1]])                                   
         return neighbours
+
+class Drone:
+    def __init__(self, drone_id: str) -> None:
+        self.drone_id: str = drone_id
+        self.current_zone: Zone = None
+        self.path: deque = deque([])
+        self.turns: int = 0
+
+    def move(self, start: Zone, next_zone: Zone) -> None:
+        self.current_zone = start
+        print(f"'{self.drone_id}' has moved from {self.current_zone.name} to {next_zone.name}")
+        self.turns += 1
+        #print(f"{self.turns} turn")
+        self.current_zone = next_zone
+
+    def add_path(self, path: List[Zone]) -> None:
+        for item in path: 
+            self.path.append(item)

@@ -1,4 +1,4 @@
-from area import Zone, Connection, Graph
+from models import Zone, Connection, Graph
 from typing import Dict, List
 
 
