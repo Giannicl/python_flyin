@@ -51,12 +51,15 @@ class Graph:
         self.zones: Dict[str, Zone] = {}
         self.connections: Dict[str, Connection] = {}
         self.nb_drones: int = 0
+        self.neighbours: Dict[str, List[Zone]] = {}
 
     def create_graph(self, element: Zone | Connection) -> None:
         if isinstance(element, Zone):
             self.zones[element.name] = element
         elif isinstance(element, Connection):
             self.connections[element.id_name] = element
+            self.neighbours.setdefault(element.zone1.name, []).append(element.zone2)
+            self.neighbours.setdefault(element.zone2.name, []).append(element.zone1)
 
     def find_zone(self, zone_name: str) -> Zone | None:
         return self.zones.get(zone_name)
@@ -64,28 +67,27 @@ class Graph:
     def find_connection(self, connection_id: str) -> Connection | None:
         return self.connections.get(connection_id)
 
-    def find_neighbours(self, zone_name: str) -> List[Zone]:
-        neighbours: List = []
-        for id_name in self.connections:
-            parts = id_name.split("-")
-            if zone_name == parts[0] or zone_name == parts[1]:
-                neighbours.append(self.zones[parts[0]] if parts[0] != zone_name else self.zones[parts[1]])                                   
-        return neighbours
+    def find_neighbours(self, zone_name: str) -> List[Zone]: 
+        return self.neighbours.get(zone_name, [])
 
 class Drone:
     def __init__(self, drone_id: str) -> None:
         self.drone_id: str = drone_id
-        self.current_zone: Zone = None
-        self.path: deque = deque([])
+        self.current_zone: Zone | None = None
+        self.path: deque[Zone] = deque([])
         self.turns: int = 0
 
-    def move(self, start: Zone, next_zone: Zone) -> None:
-        self.current_zone = start
-        print(f"'{self.drone_id}' has moved from {self.current_zone.name} to {next_zone.name}")
+    def move(self, next_zone: Zone) -> None:
         self.turns += 1
-        #print(f"{self.turns} turn")
         self.current_zone = next_zone
 
     def add_path(self, path: List[Zone]) -> None:
         for item in path: 
             self.path.append(item)
+        self.current_zone = path[0]
+
+    def __str__(self) -> None:
+        return f"{self.drone_id}"
+
+    def __repr__(self) -> None:
+        return f"{self.drone_id}"

@@ -5,8 +5,8 @@ from heapq import heappush, heappop
 from random import choice
 
 
-def bfs_path(graph: Graph, start: Zone, goal: Zone) -> list[Zone]:
-    zone_type: Dict = {
+def path_finder(graph: Graph, start: Zone, goal: Zone, full_zones: set[str] | None = None) -> list[Zone] | None:
+    cost_zone_type: Dict = {
         "start": 0,
         "end": 0,
         "normal": 0,
@@ -16,7 +16,9 @@ def bfs_path(graph: Graph, start: Zone, goal: Zone) -> list[Zone]:
     path: List = []
     came_from: Dict = {start.name: start}
     visited: Dict = {start.name: "visited"}
-    queue = [(zone_type[start.zone_type], start)]
+    if full_zones is None:
+        full_zones = set()
+    queue = [(cost_zone_type[start.zone_type], start)]
     while(queue):
         cost, current = heappop(queue)
         if current == goal:
@@ -28,12 +30,15 @@ def bfs_path(graph: Graph, start: Zone, goal: Zone) -> list[Zone]:
             return path[::-1]
         neighbours: List = graph.find_neighbours(current.name)
         for i in range(len(neighbours)):
-            neighbour: Tuple[int, Zone] = (zone_type[neighbours[i].zone_type], neighbours[i])
+            neighbour: Tuple[int, Zone] = (cost_zone_type[neighbours[i].zone_type], neighbours[i])
             neighbour_name: str = neighbours[i].name
-            if neighbour_name not in visited and neighbours[i].zone_type != "blocked":
+            if (neighbour_name not in visited 
+                and neighbours[i].zone_type != "blocked"
+                and (neighbour_name not in full_zones or neighbour_name == goal.name)):
                 visited[neighbour_name] = "visited"
                 came_from[neighbour_name] = current
-                heappush(queue, neighbour) 
+                heappush(queue, neighbour)
+    return None
     
 
 
