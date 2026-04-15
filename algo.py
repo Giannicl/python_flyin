@@ -1,11 +1,11 @@
 from file_parser import parser
 from models import Graph, Zone
-from typing import List, Dict, Tuple 
+from typing import List, Dict, Tuple, Set 
 from heapq import heappush, heappop
 from random import choice
 
 
-def path_finder(graph: Graph, start: Zone, goal: Zone, full_zones: set[str] | None = None) -> list[Zone] | None:
+def _zone_cost(zone: Zone) -> int:
     cost_zone_type: Dict = {
         "start": 0,
         "end": 0,
@@ -13,31 +13,61 @@ def path_finder(graph: Graph, start: Zone, goal: Zone, full_zones: set[str] | No
         "priority":1,
         "restricted": 2,
     }
-    path: List = []
-    came_from: Dict = {start.name: start}
-    visited: Dict = {start.name: "visited"}
+    return cost_zone_type.get(zone.zone_type, 0)
+
+def _reconstruct_path(came_from: Dict[str, Zone], start: Zone, goal: Zone) -> List[Zone]:
+    path: List[Zone] = []
+    current: Zone = goal
+    while current != start:
+        path.append(current)
+        current = came_from[current.name]
+    path.append(start)
+    return path[::-1]
+
+def _valid_next_zone(
+    neighbour_zone: Zone,
+    goal: Zone,
+    visited: Set[str],
+    full_zones: Set[str],
+    best_cost: Dict[str, int],
+    new_total_cost: int,
+) -> bool:
+    neighbour_name: str = neighbour_zone.name
+    return (
+        neighbour_name not in visited
+        and neighbour_zone.zone_type != "blocked"
+        and (neighbour_name not in full_zones or neighbour_name == goal.name)
+        and (neighbour_name not in best_cost or new_total_cost < best_cost[neighbour_name])
+    )
+
+def _initialise_finder(start: Zone, full_zones: set[str] | None) -> Tuple[Dict[str, int], Dict[str, Zone], Set[str], Set[str], List[Tuple[int, Zone]]]:
+    best_cost: Dict[str, int] = {start.name: 0}
+    came_from: Dict[str, Zone] = {start.name: start}
+    visited: Set[str] = set()
     if full_zones is None:
         full_zones = set()
-    queue = [(cost_zone_type[start.zone_type], start)]
+    queue: list[tuple[int, Zone]] = [(0, start)]
+    return best_cost, came_from, visited, full_zones, queue
+
+def path_finder(graph: Graph, start: Zone, goal: Zone, full_zones: set[str] | None = None) -> list[Zone] | None:
+    best_cost, came_from, visited, full_zones, queue = _initialise_finder(start, full_zones)
+    if full_zones is None:
+        full_zones = set()
+    queue = [(0, start)]
     while(queue):
-        cost, current = heappop(queue)
+        total_cost, current = heappop(queue)
+        if current.name in visited:
+            continue
+        visited.add(current.name)
         if current == goal:
-            current2: Zone = current
-            while current2 != start:
-                path.append(current2)
-                current2 = came_from[current2.name]
-            path.append(start)
-            return path[::-1]
-        neighbours: List = graph.find_neighbours(current.name)
-        for i in range(len(neighbours)):
-            neighbour: Tuple[int, Zone] = (cost_zone_type[neighbours[i].zone_type], neighbours[i])
-            neighbour_name: str = neighbours[i].name
-            if (neighbour_name not in visited 
-                and neighbours[i].zone_type != "blocked"
-                and (neighbour_name not in full_zones or neighbour_name == goal.name)):
-                visited[neighbour_name] = "visited"
-                came_from[neighbour_name] = current
-                heappush(queue, neighbour)
+            return _reconstruct_path(came_from, start, goal)
+        neighbours: List[Zone] = graph.find_neighbours(current.name)
+        for neighbour_zone in neighbours:
+            new_total_cost: int = total_cost + _zone_cost(neighbour_zone)
+            if _valid_next_zone(neighbour_zone, goal, visited, full_zones, best_cost, new_total_cost):
+                best_cost[neighbour_zone.name] = new_total_cost
+                came_from[neighbour_zone.name] = current
+                heappush(queue, (new_total_cost, neighbour_zone))
     return None
     
 
