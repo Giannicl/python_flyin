@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Dict, Optional, List
 from collections import deque
 
@@ -11,6 +12,7 @@ class Zone:
         zone_type: str = "normal",
         color: str = "none",
         max_drones: int = 1,
+        zone_cost: int = 0
     ) -> None:
         self.name: str = name
         self.current_drone: Optional[str] = None
@@ -19,6 +21,7 @@ class Zone:
         self.zone_type: str = zone_type
         self.color: str = color
         self.max_drones: int = max_drones
+        self.zone_cost: int = zone_cost
 
     def __str__(self) -> str:
         return f"Zone_name: {self.name}, type: {self.zone_type}, coords: ({self.xaxis}, {self.yaxis})"
@@ -30,14 +33,12 @@ class Zone:
         return self.name < other.name
 
 
-
-
 class Connection:
-    def __init__(self, id: str, zone1: Zone, zone2: Zone, max_links: int = 1) -> None:
+    def __init__(self, id: str, zone1: Zone, zone2: Zone, max_drones: int = 1) -> None:
         self.id_name: str = id
         self.zone1: Zone = zone1
         self.zone2: Zone = zone2
-        self.max_link_capacity: int = max_links
+        self.max_drones: int = max_drones
 
     def __str__(self) -> str:
         return f"Zone 1: {self.zone1}, Zone 2: {self.zone2}, max_link_capacity: {self.max_link_capacity}"
@@ -64,11 +65,21 @@ class Graph:
     def find_zone(self, zone_name: str) -> Zone | None:
         return self.zones.get(zone_name)
 
-    def find_connection(self, connection_id: str) -> Connection | None:
+    def find_connection_id(self, connection_id: str) -> Connection | None:
         return self.connections.get(connection_id)
+
+    def find_connection_zones(self, zone1: Zone, zone2: Zone) -> Connection | None:
+        connection_id: str = f"{zone1.name}-{zone2.name}"
+        reverse_connection_id: str = f"{zone2.name}-{zone1.name}"
+        if connection_id in self.connections:
+            return self.connections[connection_id]
+        if reverse_connection_id in self.connections:
+            return self.connections[reverse_connection_id]
+        return None
 
     def find_neighbours(self, zone_name: str) -> List[Zone]: 
         return self.neighbours.get(zone_name, [])
+
 
 class Drone:
     def __init__(self, drone_id: str) -> None:
@@ -76,6 +87,9 @@ class Drone:
         self.current_zone: Zone | None = None
         self.path: deque[Zone] = deque([])
         self.turns: int = 0
+        self.in_transit: bool = False
+        self.current_connection: Connection | None = None
+        self.remaining_transit_turns: int = 0
 
     def move(self, next_zone: Zone) -> None:
         self.turns += 1

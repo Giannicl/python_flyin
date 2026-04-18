@@ -1,6 +1,6 @@
 from typing import Dict, List, Set
 from file_parser import parser
-from models import Zone, Graph, Drone
+from models import Zone, Graph, Drone, Connection
 from algo import path_finder
 
 class Simulation:
@@ -8,6 +8,7 @@ class Simulation:
         self.map: Graph = parser(file_name)
         self.drones: List[Drone] = [Drone(f"D{i+1}") for i in range(self.map.nb_drones)]
         self.zone_occupancy: Dict[str, List[Drone]] = {}
+        self.connection_occupancy: Dict[str, List[Drone]] = {}
         self.turns: int = 0
     
     def _path_initialisor(self) -> None:
@@ -16,8 +17,10 @@ class Simulation:
         for zone in self.map.zones.values():
             if zone.zone_type == "start":
                 start = zone
+                print(start.name)
             if zone.zone_type == "end":
                 goal = zone
+                print(goal.name)
         if start is None or goal is None:
             raise ValueError("Map must contain both a start zone and an end zone.")
         path: List[Zone] | None = path_finder(self.map, start, goal)
@@ -32,6 +35,9 @@ class Simulation:
         if zone.zone_type == "end":
             return False
         return len(self.zone_occupancy.get(zone.name, [])) >= zone.max_drones
+  
+    def _is_connection_at_capacity(self, connection: Connection) -> bool:
+        return len(self.connection_occupancy.get(connection.id, [])) >= self.connection.max_drones
 
     def _remove_from_current_zone(self, drone: Drone) -> None:
         current_zone: Zone | None = drone.current_zone
@@ -39,13 +45,20 @@ class Simulation:
             return
         if current_zone.name in self.zone_occupancy:
             self.zone_occupancy[current_zone.name].remove(drone)
-            if not self.zone_occupancy[current_zone.name]:
+            if not self.zone_occupancy[current_zone.name]: 
                 del self.zone_occupancy[current_zone.name]
     
-    def _move_drone(self, drone: Drone, next_zone: Zone) -> None:
+    def _move_drone_to_zone(self, drone: Drone, next_zone: Zone) -> None:
         drone.move(next_zone)
         self.zone_occupancy.setdefault(next_zone.name, []).append(drone)
         drone.path.popleft()
+
+    def _move_drone_throug_connection(self, drone: Drone, connection: Zone) -> None:
+        self.connection_occupancy.setdefault(connection.id_name, []).append(drone)
+        drone.current_connection = connection
+        drone.in_transit = True
+        drone.remaining_transit_turns: int = 1
+
 
     def _find_drone_goal(self, drone: Drone) -> Zone:
         for zone in self.map.zones.values():
@@ -60,6 +73,7 @@ class Simulation:
             if len(drones) >= zone.max_drones:
                 full_zones.add(zone_name)
         return full_zones
+
 
     def _new_path_calculator(self, drone: Drone) -> List[Zone] | None:
         current_zone: Zone = drone.current_zone
@@ -118,7 +132,7 @@ class Simulation:
                 self._handle_blocked_drone(drone)
                 continue
             self._remove_from_current_zone(drone)
-            self._move_drone(drone, next_zone)
+            self._move_drone_to_zone(drone, next_zone)
                 
 
     def output(self) -> None:
