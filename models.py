@@ -12,7 +12,7 @@ class Zone:
         zone_type: str = "normal",
         color: str = "none",
         max_drones: int = 1,
-        zone_cost: int = 0
+        zone_cost: int = 0,
     ) -> None:
         self.name: str = name
         self.current_drone: Optional[str] = None
@@ -28,7 +28,7 @@ class Zone:
 
     def __repr__(self) -> str:
         return f"Zone_name: {self.name}, type: {self.zone_type}, coords: ({self.xaxis}, {self.yaxis})"
-    
+
     def __lt__(self, other: "Zone") -> bool:
         return self.name < other.name
 
@@ -41,10 +41,14 @@ class Connection:
         self.max_drones: int = max_drones
 
     def __str__(self) -> str:
-        return f"Zone 1: {self.zone1}, Zone 2: {self.zone2}, max_link_capacity: {self.max_link_capacity}"
+        return (
+            f"Zone 1: {self.zone1}, Zone 2: {self.zone2}, max_drones: {self.max_drones}"
+        )
 
     def __repr__(self) -> str:
-        return f"Zone 1: {self.zone1}, Zone 2: {self.zone2}, max_link_capacity: {self.max_link_capacity}"
+        return (
+            f"Zone 1: {self.zone1}, Zone 2: {self.zone2}, max_drones: {self.max_drones}"
+        )
 
 
 class Graph:
@@ -77,7 +81,7 @@ class Graph:
             return self.connections[reverse_connection_id]
         return None
 
-    def find_neighbours(self, zone_name: str) -> List[Zone]: 
+    def find_neighbours(self, zone_name: str) -> List[Zone]:
         return self.neighbours.get(zone_name, [])
 
 
@@ -96,7 +100,7 @@ class Drone:
         self.current_zone = next_zone
 
     def add_path(self, path: List[Zone]) -> None:
-        for item in path: 
+        for item in path:
             self.path.append(item)
         self.current_zone = path[0]
 
