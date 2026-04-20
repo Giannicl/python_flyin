@@ -23,10 +23,12 @@ class Simulation:
                 goal = zone
                 print(goal.name)
         if start is None or goal is None:
-            raise ValueError("Map must contain both a start zone and an end zone.")
+            raise ValueError(
+                "[_path_initialisor] Map must contain both a start zone and an end zone."
+            )
         path: List[Zone] | None = path_finder(self.map, start, goal)
         if path is None:
-            raise ValueError("No path found from start to end")
+            raise ValueError("[_path_initialisor] No path found from start to end")
         for drone in self.drones:
             drone.current_zone = start
             self.zone_occupancy.setdefault(start.name, []).append(drone)
@@ -67,7 +69,7 @@ class Simulation:
         for zone in self.map.zones.values():
             if zone.zone_type == "end":
                 return zone
-        raise ValueError("Map must contain an end zone.")
+        raise ValueError("[_find_drone_goal] Map must contain an end zone.")
 
     def _full_zones(self) -> Set[str]:
         full_zones: Set[str] = set()
@@ -124,7 +126,7 @@ class Simulation:
                 continue
             current_zone: Zone | None = drone.current_zone
             if current_zone is None:
-                raise ValueError(f"{drone.drone_id} has no current zone. [move_drones]")
+                raise ValueError(f"[move_drones] {drone.drone_id} has no current zone.")
             next_zone: Zone = drone.path[0]
             if self._is_zone_at_capacity(next_zone):
                 self._handle_blocked_drone(drone)

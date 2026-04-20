@@ -12,7 +12,7 @@ def validate_zone_type(zone_type: str) -> None:
         "blocked",
     }
     if zone_type not in valid_zone_types:
-        raise ValueError(f"Invalid zone type: {zone_type}. [validate_zone_type]")
+        raise ValueError(f"[validate_zone_type] Invalid zone type: {zone_type}.")
 
 
 def initialise_obj(elements: Dict, key: str, value: int | str) -> None:
