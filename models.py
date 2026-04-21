@@ -34,11 +34,11 @@ class Zone:
 
 
 class Connection:
-    def __init__(self, id: str, zone1: Zone, zone2: Zone, max_drones: int = 1) -> None:
+    def __init__(self, id: str, zone1: Zone, zone2: Zone, max_link_capacity: int = 1) -> None:
         self.id: str = id
         self.zone1: Zone = zone1
         self.zone2: Zone = zone2
-        self.max_drones: int = max_drones
+        self.max_link_capacity: int = max_link_capacity
 
     def __str__(self) -> str:
         return (

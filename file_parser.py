@@ -21,6 +21,15 @@ def validate_capacity(value: int, key: str) -> None:
             f"[validate_capacity] {key} must be a positive integer, got {value}."
         )
 
+def validate_unique_input(attributes: Dict, name_or_id: str,) -> None:
+    if name_or_id in attributes:
+        raise ValueError(f"[validate_unique_input] Duplicate element: {name_or_id}.")
+
+def validate_connection_zones_exist(graph: Graph, name_zone1: str, name_zone2: str) -> None:
+    if name_zone1 not in graph.zones:
+        raise ValueError(f"[validate_connection_zones_exist] {zone1} does not exist.")
+    if name_zone2 not in graph.zones:
+        raise ValueError(f"[validate_connection_zones_exist] {zone2} does not exist.")
 
 def initialise_obj(elements: Dict, key: str, value: int | str) -> None:
     elements[key] = value
@@ -92,7 +101,7 @@ def connection_instatiator(line: str) -> Dict:
 
 
 def create_zone(zone_elements: Dict) -> Zone:
-    validate_capacity(zone_elements.get("max_drones"))
+    validate_capacity(zone_elements.get("max_drones", 1), "max_drones")
     return Zone(
         zone_elements["name"],
         zone_elements["xaxis"],
@@ -107,6 +116,8 @@ def create_zone(zone_elements: Dict) -> Zone:
 def create_connection(connection_elements: Dict, graph: Graph) -> Connection:
     name_zone1: str = connection_elements["zone1"]
     name_zone2: str = connection_elements["zone2"]
+    validate_connection_zones_exist(graph, name_zone1, name_zone2)
+    validate_capacity(connection_elements.get("max_link_capacity", 1), "max_link_capacity")
     return Connection(
         connection_elements["id"],
         graph.zones[name_zone1],
@@ -131,12 +142,14 @@ def parser(filename: str) -> Graph:
 
             if "hub" in parts[0]:
                 zone_elements: Dict = zone_instantiator(line)
+                validate_unique_input(graph.zones, zone_elements["name"])
                 zone: Zone = create_zone(zone_elements)
                 validate_zone_type(zone.zone_type)
                 graph.create_graph(zone)
 
             if parts[0] == "connection:":
                 connection_elements: Dict = connection_instatiator(line)
+                validate_unique_input(graph.connections, connection_elements["id"])
                 connection: Connection = create_connection(connection_elements, graph)
                 graph.create_graph(connection)
 
