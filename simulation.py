@@ -11,6 +11,7 @@ class Simulation:
         self.zone_occupancy: Dict[str, List[Drone]] = {}
         self.connection_occupancy: Dict[str, List[Drone]] = {}
         self.turns: int = 0
+        self.turn_output: List[str] = []
 
     def _path_initialisor(self) -> None:
         start: Zone | None = None
@@ -18,10 +19,8 @@ class Simulation:
         for zone in self.map.zones.values():
             if zone.zone_type == "start":
                 start = zone
-                print(start.name)
             if zone.zone_type == "end":
                 goal = zone
-                print(goal.name)
         if start is None or goal is None:
             raise ValueError(
                 "[_path_initialisor] Map must contain both a start zone and an end zone."
@@ -42,7 +41,7 @@ class Simulation:
     def _is_connection_at_capacity(self, connection: Connection) -> bool:
         return (
             len(self.connection_occupancy.get(connection.id, []))
-            >= self.connection.max_drones
+            >= connection.max_drones
         )
 
     def _remove_from_current_zone(self, drone: Drone) -> None:
@@ -57,13 +56,17 @@ class Simulation:
     def _move_drone_to_zone(self, drone: Drone, next_zone: Zone) -> None:
         drone.move(next_zone)
         self.zone_occupancy.setdefault(next_zone.name, []).append(drone)
+        self.turn_output.append(f"{drone.drone_id}-{next_zone.name}")
         drone.path.popleft()
 
-    def _move_drone_throug_connection(self, drone: Drone, connection: Zone) -> None:
-        self.connection_occupancy.setdefault(connection.id_name, []).append(drone)
+    def _move_drone_through_connection(
+        self, drone: Drone, connection: Connection, next_zone: Zone
+    ) -> None:
+        self.connection_occupancy.setdefault(connection.id, []).append(drone)
+        self.turn_output.append(f"{drone.drone_id}-{connection.id}")
         drone.current_connection = connection
         drone.in_transit = True
-        drone.remaining_transit_turns: int = 1
+        drone.remaining_transit_turns = next_zone.zone_cost - 1
 
     def _find_drone_goal(self, drone: Drone) -> Zone:
         for zone in self.map.zones.values():
@@ -92,16 +95,9 @@ class Simulation:
         return new_path[1:]
 
     def _path_cost(self, path: List[Zone]) -> int:
-        cost_zone_type: Dict = {
-            "start": 0,
-            "end": 0,
-            "normal": 0,
-            "priority": 1,
-            "restricted": 2,
-        }
         cost: int = 0
         for zone in path:
-            cost += cost_zone_type.get(zone.zone_type, 0)
+            cost += zone.zone_cost
         return cost
 
     def _should_reroute_path(self, drone: Drone, new_path: List[Zone] | None) -> bool:
@@ -120,31 +116,77 @@ class Simulation:
         if self._should_reroute_path(drone, new_path):
             self._reroute_drone(drone, new_path)
 
+    def _process_transit_drone(self, drone: Drone) -> None:
+        drone.remaining_transit_turns -= 1
+        if drone.remaining_transit_turns > 0:
+            connection: Connection = drone.current_connection
+            self.turn_output.append(f"{drone.drone_id}-{connection.id}")
+        else:
+            connection: Connection | None = drone.current_connection
+            if connection is None:
+                raise ValueError(
+                    f"[_process_transit_drone] missing connection for {drone.drone_id} "
+                )
+            next_zone: Zone = (
+                connection.zone2
+                if drone.current_zone == connection.zone1
+                else connection.zone1
+            )
+            self.connection_occupancy[connection.id].remove(drone)
+            if not self.connection_occupancy[connection.id]:
+                del self.connection_occupancy[connection.id]
+            drone.in_transit = False
+            drone.current_connection = None
+            drone.remaining_transit_turns = 0
+            self._move_drone_to_zone(drone, next_zone)
+
+    def _process_move_drone(
+        self, drone: Drone, connection: Connection, next_zone: Zone
+    ) -> None:
+        if next_zone.zone_cost > 1:
+            if self._is_connection_at_capacity(connection):
+                self._handle_blocked_drone(drone)
+                return
+            self._remove_from_current_zone(drone)
+            self._move_drone_through_connection(drone, connection, next_zone)
+        else:
+            self._remove_from_current_zone(drone)
+            self._move_drone_to_zone(drone, next_zone)
+
     def move_drones(self) -> None:
         for drone in self.drones:
             if not drone.path:
+                continue
+            if drone.in_transit:
+                self._process_transit_drone(drone)
                 continue
             current_zone: Zone | None = drone.current_zone
             if current_zone is None:
                 raise ValueError(f"[move_drones] {drone.drone_id} has no current zone.")
             next_zone: Zone = drone.path[0]
-            if self._is_zone_at_capacity(next_zone):
+            if not next_zone:
+                raise ValueError(f"[move_drones] {drone.drone_id} has no next zone")
+            connection: Connection | None = self.map.find_connection_zones(
+                current_zone, next_zone
+            )
+            if connection is None:
+                raise ValueError(
+                    f"[move_drones] No connection found between {current_zone.name} and {next_zone.name}"
+                )
+            if next_zone.zone_type == "blocked" or self._is_zone_at_capacity(next_zone):
                 self._handle_blocked_drone(drone)
                 continue
-            self._remove_from_current_zone(drone)
-            self._move_drone_to_zone(drone, next_zone)
+            self._process_move_drone(drone, connection, next_zone)
 
     def output(self) -> None:
-        for drone in self.drones:
-            if drone.current_zone is not None:
-                print(f"{drone.drone_id} - {drone.current_zone.name} ", end="")
-        print()
+        if self.turn_output:
+            print(" ".join(sorted(self.turn_output)))
 
     def run(self) -> None:
         self._path_initialisor()
-        self.output()
         while any(drone.path for drone in self.drones):
             self.turns += 1
+            self.turn_output = []
             self.move_drones()
             self.output()
 

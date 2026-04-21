@@ -15,6 +15,13 @@ def validate_zone_type(zone_type: str) -> None:
         raise ValueError(f"[validate_zone_type] Invalid zone type: {zone_type}.")
 
 
+def validate_capacity(value: int, key: str) -> None:
+    if value <= 0:
+        raise ValueError(
+            f"[validate_capacity] {key} must be a positive integer, got {value}."
+        )
+
+
 def initialise_obj(elements: Dict, key: str, value: int | str) -> None:
     elements[key] = value
 
@@ -85,6 +92,7 @@ def connection_instatiator(line: str) -> Dict:
 
 
 def create_zone(zone_elements: Dict) -> Zone:
+    validate_capacity(zone_elements.get("max_drones"))
     return Zone(
         zone_elements["name"],
         zone_elements["xaxis"],

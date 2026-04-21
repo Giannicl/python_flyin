@@ -35,7 +35,7 @@ class Zone:
 
 class Connection:
     def __init__(self, id: str, zone1: Zone, zone2: Zone, max_drones: int = 1) -> None:
-        self.id_name: str = id
+        self.id: str = id
         self.zone1: Zone = zone1
         self.zone2: Zone = zone2
         self.max_drones: int = max_drones
@@ -62,7 +62,7 @@ class Graph:
         if isinstance(element, Zone):
             self.zones[element.name] = element
         elif isinstance(element, Connection):
-            self.connections[element.id_name] = element
+            self.connections[element.id] = element
             self.neighbours.setdefault(element.zone1.name, []).append(element.zone2)
             self.neighbours.setdefault(element.zone2.name, []).append(element.zone1)
 

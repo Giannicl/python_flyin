@@ -7,8 +7,8 @@ def main() -> None:
         sim.run()
     except ValueError as e:
         print(f"Error: {e}")
-    except Exception as e:
-        print(f"Unknow error: {e}")
+    # except Exception as e:
+    #   print(f"Unknow error: {e}")
 
 
 if __name__ == "__main__":
