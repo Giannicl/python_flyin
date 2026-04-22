@@ -12,6 +12,7 @@ class Simulation:
         self.connection_occupancy: Dict[str, List[Drone]] = {}
         self.turns: int = 0
         self.turn_output: List[str] = []
+        self.zone_arrival_reservation: Dict[int, Dict[str, int]] = {}
 
     def _path_initialisor(self) -> None:
         start: Zone | None = None
@@ -132,12 +133,14 @@ class Simulation:
                 if drone.current_zone == connection.zone1
                 else connection.zone1
             )
-            self.connection_occupancy[connection.id].remove(drone)
-            if not self.connection_occupancy[connection.id]:
-                del self.connection_occupancy[connection.id]
+            if self._is_zone_at_capacity(next_zone):
+                return
             drone.in_transit = False
             drone.current_connection = None
             drone.remaining_transit_turns = 0
+            self.connection_occupancy[connection.id].remove(drone)
+            if not self.connection_occupancy[connection.id]:
+                del self.connection_occupancy[connection.id]
             self._move_drone_to_zone(drone, next_zone)
 
     def _process_move_drone(
