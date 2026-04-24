@@ -42,12 +42,12 @@ class Connection:
 
     def __str__(self) -> str:
         return (
-            f"Zone 1: {self.zone1}, Zone 2: {self.zone2}, max_drones: {self.max_drones}"
+            f"Zone 1: {self.zone1}, Zone 2: {self.zone2}, max_link_capacity: {self.max_link_capacity}"
         )
 
     def __repr__(self) -> str:
         return (
-            f"Zone 1: {self.zone1}, Zone 2: {self.zone2}, max_drones: {self.max_drones}"
+            f"Zone 1: {self.zone1}, Zone 2: {self.zone2}, max_link_capacity: {self.max_link_capacity}"
         )
 
 

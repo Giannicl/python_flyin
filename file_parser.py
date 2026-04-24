@@ -44,9 +44,9 @@ def validate_connection_zones_exist(
     graph: Graph, name_zone1: str, name_zone2: str
 ) -> None:
     if name_zone1 not in graph.zones:
-        raise ValueError(f"[validate_connection_zones_exist] {zone1} does not exist.")
+        raise ValueError(f"[validate_connection_zones_exist] {name_zone1} does not exist.")
     if name_zone2 not in graph.zones:
-        raise ValueError(f"[validate_connection_zones_exist] {zone2} does not exist.")
+        raise ValueError(f"[validate_connection_zones_exist] {name_zone2} does not exist.")
 
 
 def validate_required_zones(graph: Graph) -> None:

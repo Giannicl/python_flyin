@@ -12,7 +12,7 @@ class Simulation:
         self.connection_occupancy: Dict[str, List[Drone]] = {}
         self.turns: int = 0
         self.turn_output: List[str] = []
-        self.zone_arrival_reservation: Dict[int, Dict[str, int]] = {}
+        self.zone_arrival_reservations: Dict[int, Dict[str, int]] = {}
 
     def _path_initialisor(self) -> None:
         start: Zone | None = None
@@ -42,7 +42,7 @@ class Simulation:
     def _is_connection_at_capacity(self, connection: Connection) -> bool:
         return (
             len(self.connection_occupancy.get(connection.id, []))
-            >= connection.max_drones
+            >= connection.max_link_capacity
         )
 
     def _remove_from_current_zone(self, drone: Drone) -> None:
@@ -117,44 +117,96 @@ class Simulation:
         if self._should_reroute_path(drone, new_path):
             self._reroute_drone(drone, new_path)
 
-    def _process_transit_drone(self, drone: Drone) -> None:
-        drone.remaining_transit_turns -= 1
-        if drone.remaining_transit_turns > 0:
-            connection: Connection = drone.current_connection
-            self.turn_output.append(f"{drone.drone_id}-{connection.id}")
-        else:
-            connection: Connection | None = drone.current_connection
-            if connection is None:
-                raise ValueError(
-                    f"[_process_transit_drone] missing connection for {drone.drone_id} "
-                )
-            next_zone: Zone = (
-                connection.zone2
-                if drone.current_zone == connection.zone1
-                else connection.zone1
+    def _get_transit_connection(self, drone: Drone) -> Connection:
+        connection: Connection | None = drone.current_connection
+        if connection is None:
+            raise ValueError(
+                f"[_get_transit_connection] missing connection for {drone.drone_id}"
             )
-            if self._is_zone_at_capacity(next_zone):
-                return
-            drone.in_transit = False
-            drone.current_connection = None
-            drone.remaining_transit_turns = 0
-            self.connection_occupancy[connection.id].remove(drone)
-            if not self.connection_occupancy[connection.id]:
-                del self.connection_occupancy[connection.id]
-            self._move_drone_to_zone(drone, next_zone)
+        return connection
+
+    def _get_transit_destination(self, drone: Drone, connection: Connection) -> Zone:
+        return (
+            connection.zone2
+            if drone.current_zone == connection.zone1
+            else connection.zone1
+        )
+   
+    def _release_connection(self, drone: Drone, connection: Connection) -> None:
+        self.connection_occupancy[connection.id].remove(drone)
+        if not self.connection_occupancy[connection.id]:
+            del self.connection_occupancy[connection.id]
+
+    def _release_arrival_reservation(self, zone: Zone, arrival_turn: int) -> None:
+        if arrival_turn not in self.zone_arrival_reservations:
+            return
+        if zone.name not in self.zone_arrival_reservations[arrival_turn]:
+            return
+        self.zone_arrival_reservations[arrival_turn][zone.name] -= 1
+        if self.zone_arrival_reservations[arrival_turn][zone.name] == 0:
+            del self.zone_arrival_reservations[arrival_turn][zone.name]
+        if not self.zone_arrival_reservations[arrival_turn]:
+            del self.zone_arrival_reservations[arrival_turn]
+
+    def _clear_transit_state(self, drone: Drone) -> None:
+        drone.in_transit = False
+        drone.current_connection = None
+        drone.remaining_transit_turns = 0
+
+    def _process_transit_drone(self, drone: Drone) -> None:
+        connection: Connection = self._get_transit_connection(drone) 
+        drone.remaining_transit_turns -= 1 
+        if drone.remaining_transit_turns > 0:
+            self.turn_output.append(f"{drone.drone_id}-{connection.id}")
+            return
+        next_zone: Zone = self._get_transit_destination(drone, connection)
+        self._release_connection(drone, connection)
+        arrival_turn: int = self.turns
+        self._release_arrival_reservation(next_zone, arrival_turn)
+        self._clear_transit_state(drone)    
+
+
+        self._move_drone_to_zone(drone, next_zone)
 
     def _process_move_drone(
         self, drone: Drone, connection: Connection, next_zone: Zone
     ) -> None:
         if next_zone.zone_cost > 1:
-            if self._is_connection_at_capacity(connection):
+            arrival_turn: int = self._arrival_turn(next_zone)
+            if (
+                not self._has_arrival_capacity(next_zone, arrival_turn)
+                or self._is_connection_at_capacity(connection)):
                 self._handle_blocked_drone(drone)
                 return
+            self._reserve_arrival(next_zone, arrival_turn)
             self._remove_from_current_zone(drone)
             self._move_drone_through_connection(drone, connection, next_zone)
         else:
+            if self._is_zone_at_capacity(next_zone):
+                self._handle_blocked_drone(drone)
+                return
             self._remove_from_current_zone(drone)
             self._move_drone_to_zone(drone, next_zone)
+
+
+    def _arrival_turn(self, next_zone: Zone) -> int:
+        return self.turns + next_zone.zone_cost - 1
+
+    def _reserved_arrivals(self, zone: Zone, arrival_turn: int) -> int:
+        return self.zone_arrival_reservations.get(arrival_turn, {}).get(zone.name, 0)
+
+    def _reserve_arrival(self, zone: Zone, arrival_turn: int) -> None:
+        self.zone_arrival_reservations.setdefault(arrival_turn, {})
+        self.zone_arrival_reservations[arrival_turn][zone.name] = (
+            self.zone_arrival_reservations[arrival_turn].get(zone.name, 0) + 1
+        )
+
+    def _has_arrival_capacity(self, zone: Zone, arrival_turn: int) -> bool:
+        if zone.zone_type == "end":
+            return True
+        reserved_occupancy: int = self._reserved_arrivals(zone, arrival_turn)
+        return reserved_occupancy < zone.max_drones
+
 
     def move_drones(self) -> None:
         for drone in self.drones:
@@ -176,7 +228,7 @@ class Simulation:
                 raise ValueError(
                     f"[move_drones] No connection found between {current_zone.name} and {next_zone.name}"
                 )
-            if next_zone.zone_type == "blocked" or self._is_zone_at_capacity(next_zone):
+            if next_zone.zone_type == "blocked":
                 self._handle_blocked_drone(drone)
                 continue
             self._process_move_drone(drone, connection, next_zone)
