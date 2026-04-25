@@ -1,10 +1,13 @@
 from simulation import Simulation
+from visualizer import Visualizer
 
 
 def main() -> None:
     try:
-        sim = Simulation("./maps/hard/01_maze_nightmare.txt")
+        sim: Simulation = Simulation("./maps/hard/01_maze_nightmare.txt")
         sim.run()
+        visualizer: Visualizer = Visualizer(sim.map, sim.frames)
+        visualizer.run()
     except ValueError as e:
         print(f"Error: {e}")
     # except Exception as e:

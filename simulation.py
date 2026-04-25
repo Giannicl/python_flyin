@@ -13,6 +13,17 @@ class Simulation:
         self.turns: int = 0
         self.turn_output: List[str] = []
         self.zone_arrival_reservations: Dict[int, Dict[str, int]] = {}
+        self.frames: List[Dict[str, str]] = []
+
+    def _record_frame(self) -> None:
+        frame: Dict[str, str] = {}
+        for zone_name, drones in self.zone_occupancy.items():
+            for drone in drones:
+                frame[drone.drone_id] = zone_name
+        for connection_id, drones in self.connection_occupancy.items():
+            for drone in drones:
+                frame[drone.drone_id] = connection_id
+        self.frames.append(frame)
 
     def _path_initialisor(self) -> None:
         start: Zone | None = None
@@ -239,10 +250,12 @@ class Simulation:
 
     def run(self) -> None:
         self._path_initialisor()
+        self._record_frame()
         while any(drone.path for drone in self.drones):
             self.turns += 1
             self.turn_output = []
             self.move_drones()
+            self._record_frame()
             self.output()
 
 

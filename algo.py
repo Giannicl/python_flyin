@@ -1,8 +1,6 @@
-from file_parser import parser
 from models import Graph, Zone
 from typing import List, Dict, Tuple, Set
 from heapq import heappush, heappop
-from random import choice
 
 
 def _reconstruct_path(
