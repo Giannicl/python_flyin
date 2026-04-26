@@ -57,7 +57,42 @@ class Visualizer:
             pygame.draw.circle(self.screen, (60, 60, 60), (x, y), 10)
             pygame.draw.circle(self.screen, (0, 0, 0), (x, y), 18, 2)
 
+    def _draw_drone_marker(self, x: int, y: int) -> None:
+        points: list[tuple[int, int]] = [
+            (x + 9, y),
+            (x - 7, y - 7),
+            (x - 7, y + 7),
+        ]
+        pygame.draw.polygon(self.screen, (200, 0, 0), points)
+    
+    
+    def _draw_drone_at_zone(self, drone_id: str, zone_name: str) -> None:
+        zone = self.graph.zones[zone_name]
+        x, y = self._scaled_position(zone.xaxis, zone.yaxis)
+        self._draw_drone_marker(x, y)
+    
+    
+    def _draw_drone_on_connection(self, drone_id: str, connection_id: str) -> None:
+        connection = self.graph.connections[connection_id]
+    
+        x1, y1 = self._scaled_position(connection.zone1.xaxis, connection.zone1.yaxis)
+        x2, y2 = self._scaled_position(connection.zone2.xaxis, connection.zone2.yaxis)
+    
+        mid_x: int = (x1 + x2) // 2
+        mid_y: int = (y1 + y2) // 2
+    
+        self._draw_drone_marker(mid_x, mid_y)
+    
+    
+    def _draw_drones(self, frame: dict[str, str]) -> None:
+        for drone_id, location in frame.items():
+            if location in self.graph.zones:
+                self._draw_drone_at_zone(drone_id, location)
+            elif location in self.graph.connections:
+                self._draw_drone_on_connection(drone_id, location)
+
     def run(self) -> None:
+        frame_index: int = 0
         while self.running:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -66,6 +101,9 @@ class Visualizer:
             self.screen.fill((245, 245, 245))
             self._draw_connections()
             self._draw_zones()
+            if self.frames:
+                self._draw_drones(self.frames[frame_index])
+
             pygame.display.flip()
             self.clock.tick(60)
         pygame.quit()
