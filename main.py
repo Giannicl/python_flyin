@@ -6,7 +6,7 @@ def main() -> None:
     try:
         sim: Simulation = Simulation("./maps/hard/01_maze_nightmare.txt")
         sim.run()
-        visualizer: Visualizer = Visualizer(sim.map, sim.frames)
+        visualizer: Visualizer = Visualizer(sim.graph, sim.frames)
         visualizer.run()
     except ValueError as e:
         print(f"Error: {e}")

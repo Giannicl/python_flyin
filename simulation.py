@@ -6,8 +6,8 @@ from algo import path_finder
 
 class Simulation:
     def __init__(self, file_name: str) -> None:
-        self.map: Graph = parser(file_name)
-        self.drones: List[Drone] = [Drone(f"D{i+1}") for i in range(self.map.nb_drones)]
+        self.graph: Graph = parser(file_name)
+        self.drones: List[Drone] = [Drone(f"D{i+1}") for i in range(self.graph.nb_drones)]
         self.zone_occupancy: Dict[str, List[Drone]] = {}
         self.connection_occupancy: Dict[str, List[Drone]] = {}
         self.turns: int = 0
@@ -28,7 +28,7 @@ class Simulation:
     def _path_initialisor(self) -> None:
         start: Zone | None = None
         goal: Zone | None = None
-        for zone in self.map.zones.values():
+        for zone in self.graph.zones.values():
             if zone.zone_type == "start":
                 start = zone
             if zone.zone_type == "end":
@@ -37,7 +37,7 @@ class Simulation:
             raise ValueError(
                 "[_path_initialisor] Map must contain both a start zone and an end zone."
             )
-        path: List[Zone] | None = path_finder(self.map, start, goal)
+        path: List[Zone] | None = path_finder(self.graph, start, goal)
         if path is None:
             raise ValueError("[_path_initialisor] No path found from start to end")
         for drone in self.drones:
@@ -81,7 +81,7 @@ class Simulation:
         drone.remaining_transit_turns = next_zone.zone_cost - 1
 
     def _find_drone_goal(self, drone: Drone) -> Zone:
-        for zone in self.map.zones.values():
+        for zone in self.graph.zones.values():
             if zone.zone_type == "end":
                 return zone
         raise ValueError("[_find_drone_goal] Map must contain an end zone.")
@@ -89,7 +89,7 @@ class Simulation:
     def _full_zones(self) -> Set[str]:
         full_zones: Set[str] = set()
         for zone_name, drones in self.zone_occupancy.items():
-            zone: Zone = self.map.zones[zone_name]
+            zone: Zone = self.graph.zones[zone_name]
             if len(drones) >= zone.max_drones:
                 full_zones.add(zone_name)
         return full_zones
@@ -101,7 +101,7 @@ class Simulation:
         goal: Zone = self._find_drone_goal(drone)
         full_zones: Set[str] = self._full_zones()
         full_zones.discard(current_zone.name)
-        new_path = path_finder(self.map, current_zone, goal, full_zones=full_zones)
+        new_path = path_finder(self.graph, current_zone, goal, full_zones=full_zones)
         if new_path is None or len(new_path) <= 1:
             return None
         return new_path[1:]
@@ -232,7 +232,7 @@ class Simulation:
             next_zone: Zone = drone.path[0]
             if not next_zone:
                 raise ValueError(f"[move_drones] {drone.drone_id} has no next zone")
-            connection: Connection | None = self.map.find_connection_zones(
+            connection: Connection | None = self.graph.find_connection_zones(
                 current_zone, next_zone
             )
             if connection is None:
