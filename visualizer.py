@@ -84,27 +84,62 @@ class Visualizer:
         self._draw_drone_marker(mid_x, mid_y)
     
     
-    def _draw_drones(self, frame: dict[str, str]) -> None:
-        for drone_id, location in frame.items():
-            if location in self.graph.zones:
-                self._draw_drone_at_zone(drone_id, location)
-            elif location in self.graph.connections:
-                self._draw_drone_on_connection(drone_id, location)
+    def _get_position(self, location: str) -> tuple[int, int]:
+        if location in self.graph.zones:
+            zone = self.graph.zones[location]
+            return self._scaled_position(zone.xaxis, zone.yaxis)
+    
+        elif location in self.graph.connections:
+            connection = self.graph.connections[location]
+    
+            x1, y1 = self._scaled_position(connection.zone1.xaxis, connection.zone1.yaxis)
+            x2, y2 = self._scaled_position(connection.zone2.xaxis, connection.zone2.yaxis)
+    
+            return (x1 + x2) // 2, (y1 + y2) // 2
+    
+        return (0, 0)
+
+    def _draw_drones_interpolated(
+        self,
+        frame_a: dict[str, str],
+        frame_b: dict[str, str],
+        progress: float
+    ) -> None:
+        for drone_id in frame_a:
+            loc_a = frame_a[drone_id]
+            loc_b = frame_b.get(drone_id, loc_a)
+    
+            x1, y1 = self._get_position(loc_a)
+            x2, y2 = self._get_position(loc_b)
+    
+            x = int(x1 + (x2 - x1) * progress)
+            y = int(y1 + (y2 - y1) * progress)
+    
+            self._draw_drone_marker(x, y)
+
 
     def run(self) -> None:
         frame_index: int = 0
+        progress: float = 0.0
+        speed: float = 1.5 
         while self.running:
+            time = self.clock.tick(60) / 1000 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    self.running = False
-
+                    self.running = False    
+            progress += time * speed
             self.screen.fill((245, 245, 245))
             self._draw_connections()
             self._draw_zones()
-            if self.frames:
-                self._draw_drones(self.frames[frame_index])
-
+            if len(self.frames) > 1 and frame_index < len(self.frames) - 1:
+                self._draw_drones_interpolated(
+                    self.frames[frame_index],
+                    self.frames[frame_index + 1],
+                    progress
+                )
             pygame.display.flip()
-            self.clock.tick(60)
+            if progress >= 1.0:
+                progress = 0.0
+                frame_index += 1
+    
         pygame.quit()
-
