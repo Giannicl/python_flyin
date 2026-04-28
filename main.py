@@ -4,7 +4,7 @@ from visualizer import Visualizer
 
 def main() -> None:
     try:
-        sim: Simulation = Simulation("./maps/hard/01_maze_nightmare.txt")
+        sim: Simulation = Simulation("./maps/medium/02_circular_loop.txt")
         sim.run()
         visualizer: Visualizer = Visualizer(sim.graph, sim.frames)
         visualizer.run()

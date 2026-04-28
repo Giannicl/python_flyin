@@ -99,6 +99,11 @@ def initialise_zone_cost(elements: Dict) -> None:
     else:
         elements["zone_cost"] = 1
 
+def _parse_int(value: str, field: str) -> int:
+    try:
+        return int(value)
+    except ValueError:
+        raise ValueError(f"[zone_instantiator] Invalid {field}: {value}")
 
 def zone_instantiator(line: str) -> Dict:
     elements: Dict = {}
@@ -112,10 +117,10 @@ def zone_instantiator(line: str) -> Dict:
 
     if size_parts > 1:
         initialise_obj(elements, "name", parts[1])
-    if size_parts > 2 and parts[2].isdigit():
-        initialise_obj(elements, "xaxis", int(parts[2]))
-    if size_parts > 3 and parts[3].isdigit():
-        initialise_obj(elements, "yaxis", int(parts[3]))
+    if size_parts > 2:
+        initialise_obj(elements, "xaxis", _parse_int(parts[2], "xaxis"))
+    if size_parts > 3:
+        initialise_obj(elements, "yaxis", _parse_int(parts[3], "yaxis"))
 
     if size_parts > 4 and "[" in line and "=" in line:
         meta_data: List[str] = parts[4][1:-1].split(" ")
@@ -147,6 +152,8 @@ def connection_instatiator(line: str) -> Dict:
 
 def create_zone(zone_elements: Dict) -> Zone:
     validate_capacity(zone_elements.get("max_drones", 1), "max_drones")
+    if "xaxis" not in zone_elements or "yaxis" not in zone_elements:
+        raise ValueError(f"Invalid zone definition: {zone_elements}")
     return Zone(
         zone_elements["name"],
         zone_elements["xaxis"],

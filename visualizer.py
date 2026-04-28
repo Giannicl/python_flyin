@@ -4,6 +4,28 @@ import pygame
 from typing import List, Dict, Tuple
 
 class Visualizer:
+    RGB_COLOR_MAP: dict[str, tuple[int, int, int]] = {
+        "red": (220, 50, 50),
+        "green": (50, 180, 90),
+        "blue": (50, 100, 220),
+        "yellow": (220, 200, 50),
+        "magenta": (200, 50, 200),
+        "cyan": (50, 200, 200),
+        "white": (240, 240, 240),
+        "purple": (140, 70, 180),
+        "orange": (230, 130, 40),
+        "brown": (130, 80, 40),
+        "gold": (220, 170, 40),
+        "maroon": (120, 30, 50),
+        "violet": (150, 80, 200),
+        "crimson": (180, 30, 60),
+        "darkred": (100, 20, 20),
+        "black": (40, 40, 40),
+        "gray": (130, 130, 130),
+        "rainbow": (200, 80, 220),
+        "none": (120, 120, 120),
+        }
+
     def __init__(self, graph: Graph, frames: List[Dict[str, str]]) -> None:
         pygame.init()
         self.graph: Graph = graph
@@ -54,7 +76,8 @@ class Visualizer:
     def _draw_zones(self) -> None:
         for zone in self.graph.zones.values():
             x, y = self._scaled_position(zone.xaxis, zone.yaxis)
-            pygame.draw.circle(self.screen, (60, 60, 60), (x, y), 10)
+            color = self.RGB_COLOR_MAP.get(zone.color, (120, 120, 120))
+            pygame.draw.circle(self.screen, color, (x, y), 10)
             pygame.draw.circle(self.screen, (0, 0, 0), (x, y), 18, 2)
 
     def _draw_drone_marker(self, x: int, y: int) -> None:
@@ -63,7 +86,7 @@ class Visualizer:
             (x - 7, y - 7),
             (x - 7, y + 7),
         ]
-        pygame.draw.polygon(self.screen, (200, 0, 0), points)
+        pygame.draw.polygon(self.screen, (0, 0, 255), points)
     
     
     def _draw_drone_at_zone(self, drone_id: str, zone_name: str) -> None:
@@ -87,16 +110,12 @@ class Visualizer:
     def _get_position(self, location: str) -> tuple[int, int]:
         if location in self.graph.zones:
             zone = self.graph.zones[location]
-            return self._scaled_position(zone.xaxis, zone.yaxis)
-    
+            return self._scaled_position(zone.xaxis, zone.yaxis) 
         elif location in self.graph.connections:
-            connection = self.graph.connections[location]
-    
+            connection = self.graph.connections[location]    
             x1, y1 = self._scaled_position(connection.zone1.xaxis, connection.zone1.yaxis)
-            x2, y2 = self._scaled_position(connection.zone2.xaxis, connection.zone2.yaxis)
-    
-            return (x1 + x2) // 2, (y1 + y2) // 2
-    
+            x2, y2 = self._scaled_position(connection.zone2.xaxis, connection.zone2.yaxis) 
+            return (x1 + x2) // 2, (y1 + y2) // 2 
         return (0, 0)
 
     def _draw_drones_interpolated(
@@ -123,10 +142,10 @@ class Visualizer:
         progress: float = 0.0
         speed: float = 1.5 
         while self.running:
-            time = self.clock.tick(60) / 1000 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.running = False    
+            time = self.clock.tick(60) / 1000 
             progress += time * speed
             self.screen.fill((245, 245, 245))
             self._draw_connections()

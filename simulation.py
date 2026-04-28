@@ -5,6 +5,26 @@ from algo import path_finder
 
 
 class Simulation:
+    RGB_COLOR_MAP: dict[str, tuple[int, int, int]] = {
+        "red": (220, 50, 50),
+        "green": (50, 180, 90),
+        "blue": (50, 100, 220),
+        "yellow": (220, 200, 50),
+        "purple": (140, 70, 180),
+        "orange": (230, 130, 40),
+        "brown": (130, 80, 40),
+        "gold": (220, 170, 40),
+        "maroon": (120, 30, 50),
+        "violet": (150, 80, 200),
+        "crimson": (180, 30, 60),
+        "darkred": (100, 20, 20),
+        "black": (40, 40, 40),
+        "gray": (130, 130, 130),
+        "rainbow": (200, 80, 220),
+        "none": (255, 255, 255),
+    }
+    ANSI_RESET = "\033[0m"
+
     def __init__(self, file_name: str) -> None:
         self.graph: Graph = parser(file_name)
         self.drones: List[Drone] = [Drone(f"D{i+1}") for i in range(self.graph.nb_drones)]
@@ -175,8 +195,6 @@ class Simulation:
         arrival_turn: int = self.turns
         self._release_arrival_reservation(next_zone, arrival_turn)
         self._clear_transit_state(drone)    
-
-
         self._move_drone_to_zone(drone, next_zone)
 
     def _process_move_drone(
@@ -218,6 +236,22 @@ class Simulation:
         reserved_occupancy: int = self._reserved_arrivals(zone, arrival_turn)
         return reserved_occupancy < zone.max_drones
 
+    def _colorize(self, text: str, color: str) -> str:
+        rgb = self.RGB_COLOR_MAP.get(color)
+        if rgb is None:
+            return text
+        red, green, blue = rgb
+        return f"\033[38;2;{red};{green};{blue}m{text}{self.ANSI_RESET}"
+    
+    def _format_move(self, move: str) -> str:
+        _, location = move.split("-", 1)    
+        if location in self.graph.zones:
+            zone = self.graph.zones[location]
+            return self._colorize(move, zone.color) 
+        if location in self.graph.connections:
+            connection = self.graph.connections[location]
+            return self._colorize(move, connection.zone2.color)
+        return move
 
     def move_drones(self) -> None:
         for drone in self.drones:
@@ -245,8 +279,10 @@ class Simulation:
             self._process_move_drone(drone, connection, next_zone)
 
     def output(self) -> None:
-        if self.turn_output:
-            print(" ".join(sorted(self.turn_output)))
+        if not self.turn_output:
+            return
+        formatted_moves = [self._format_move(move) for move in sorted(self.turn_output)]
+        print(" ".join(formatted_moves))
 
     def run(self) -> None:
         self._path_initialisor()
@@ -260,5 +296,4 @@ class Simulation:
 
 
 if __name__ == "__main__":
-    sim = Simulation("./maps/hard/01_maze_nightmare.txt")
-    sim.run()
+   pass 
