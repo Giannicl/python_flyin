@@ -27,13 +27,31 @@ class Simulation:
 
     def __init__(self, file_name: str) -> None:
         self.graph: Graph = parser(file_name)
-        self.drones: List[Drone] = [Drone(f"D{i+1}") for i in range(self.graph.nb_drones)]
+        self.drones: List[Drone] = [
+            Drone(f"D{i+1}") for i in range(self.graph.nb_drones)
+        ]
         self.zone_occupancy: Dict[str, List[Drone]] = {}
         self.connection_occupancy: Dict[str, List[Drone]] = {}
+        self.turn_connection_usage: dict[str, int] = {}
         self.turns: int = 0
         self.turn_output: List[str] = []
         self.zone_arrival_reservations: Dict[int, Dict[str, int]] = {}
         self.frames: List[Dict[str, str]] = []
+        self.capacity_info_enabled: bool = False
+
+    def _print_capacity_info(self) -> None:
+        zone_info = []
+        for zone_name, zone in self.graph.zones.items():
+            current = len(self.zone_occupancy.get(zone_name, []))
+            zone_info.append(f"{zone_name}: {current}/{zone.max_drones}")
+
+        connection_info = []
+        for conn_id, conn in self.graph.connections.items():
+            current = len(self.connection_occupancy.get(conn_id, []))
+            connection_info.append(f"{conn_id}: {current}/{conn.max_link_capacity}")
+
+        print(" | ".join(zone_info))
+        print(" | ".join(connection_info))
 
     def _record_frame(self) -> None:
         frame: Dict[str, str] = {}
@@ -162,7 +180,7 @@ class Simulation:
             if drone.current_zone == connection.zone1
             else connection.zone1
         )
-   
+
     def _release_connection(self, drone: Drone, connection: Connection) -> None:
         self.connection_occupancy[connection.id].remove(drone)
         if not self.connection_occupancy[connection.id]:
@@ -185,8 +203,8 @@ class Simulation:
         drone.remaining_transit_turns = 0
 
     def _process_transit_drone(self, drone: Drone) -> None:
-        connection: Connection = self._get_transit_connection(drone) 
-        drone.remaining_transit_turns -= 1 
+        connection: Connection = self._get_transit_connection(drone)
+        drone.remaining_transit_turns -= 1
         if drone.remaining_transit_turns > 0:
             self.turn_output.append(f"{drone.drone_id}-{connection.id}")
             return
@@ -194,17 +212,21 @@ class Simulation:
         self._release_connection(drone, connection)
         arrival_turn: int = self.turns
         self._release_arrival_reservation(next_zone, arrival_turn)
-        self._clear_transit_state(drone)    
+        self._clear_transit_state(drone)
         self._move_drone_to_zone(drone, next_zone)
 
     def _process_move_drone(
         self, drone: Drone, connection: Connection, next_zone: Zone
     ) -> None:
+        if not self._has_connection_capacity(connection):
+            self._handle_blocked_drone(drone)
+            return
+
         if next_zone.zone_cost > 1:
             arrival_turn: int = self._arrival_turn(next_zone)
-            if (
-                not self._has_arrival_capacity(next_zone, arrival_turn)
-                or self._is_connection_at_capacity(connection)):
+            if not self._has_arrival_capacity(
+                next_zone, arrival_turn
+            ) or self._is_connection_at_capacity(connection):
                 self._handle_blocked_drone(drone)
                 return
             self._reserve_arrival(next_zone, arrival_turn)
@@ -214,9 +236,9 @@ class Simulation:
             if self._is_zone_at_capacity(next_zone):
                 self._handle_blocked_drone(drone)
                 return
+            self._reserve_connection(connection)
             self._remove_from_current_zone(drone)
             self._move_drone_to_zone(drone, next_zone)
-
 
     def _arrival_turn(self, next_zone: Zone) -> int:
         return self.turns + next_zone.zone_cost - 1
@@ -242,18 +264,29 @@ class Simulation:
             return text
         red, green, blue = rgb
         return f"\033[38;2;{red};{green};{blue}m{text}{self.ANSI_RESET}"
-    
+
     def _format_move(self, move: str) -> str:
-        _, location = move.split("-", 1)    
+        _, location = move.split("-", 1)
         if location in self.graph.zones:
             zone = self.graph.zones[location]
-            return self._colorize(move, zone.color) 
+            return self._colorize(move, zone.color)
         if location in self.graph.connections:
             connection = self.graph.connections[location]
             return self._colorize(move, connection.zone2.color)
         return move
 
+    def _has_connection_capacity(self, connection: Connection) -> bool:
+        used = self.turn_connection_usage.get(connection.id, 0)
+        return used < connection.max_link_capacity
+
+    def _reserve_connection(self, connection: Connection) -> None:
+        self.turn_connection_usage[connection.id] = (
+            self.turn_connection_usage.get(connection.id, 0) + 1
+        )
+
     def move_drones(self) -> None:
+        self.turn_output = []
+        self.turn_connection_usage = {}
         for drone in self.drones:
             if not drone.path:
                 continue
@@ -283,6 +316,8 @@ class Simulation:
             return
         formatted_moves = [self._format_move(move) for move in sorted(self.turn_output)]
         print(" ".join(formatted_moves))
+        if self.capacity_info_enabled:
+            self._print_capacity_info()
 
     def run(self) -> None:
         self._path_initialisor()
@@ -296,4 +331,4 @@ class Simulation:
 
 
 if __name__ == "__main__":
-   pass 
+    pass

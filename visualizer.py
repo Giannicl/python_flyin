@@ -1,7 +1,8 @@
 from models import Graph
 from simulation import Simulation
-import pygame 
+import pygame
 from typing import List, Dict, Tuple
+
 
 class Visualizer:
     RGB_COLOR_MAP: dict[str, tuple[int, int, int]] = {
@@ -24,7 +25,7 @@ class Visualizer:
         "gray": (130, 130, 130),
         "rainbow": (200, 80, 220),
         "none": (120, 120, 120),
-        }
+    }
 
     def __init__(self, graph: Graph, frames: List[Dict[str, str]]) -> None:
         pygame.init()
@@ -38,26 +39,22 @@ class Visualizer:
         self.clock: pygame.time.Clock = pygame.time.Clock()
         self.running: bool = True
 
-
     def _coordinate_boundaries(self) -> tuple[int, int, int, int]:
         min_x: int = min(zone.xaxis for zone in self.graph.zones.values())
         max_x: int = max(zone.xaxis for zone in self.graph.zones.values())
         min_y: int = min(zone.yaxis for zone in self.graph.zones.values())
         max_y: int = max(zone.yaxis for zone in self.graph.zones.values())
         return min_x, max_x, min_y, max_y
-    
-    
+
     def _drawable_area(self) -> tuple[int, int]:
         return self.width - 2 * self.margin, self.height - 2 * self.margin
-    
-    
+
     def _scale(self, range_x: int, range_y: int) -> float:
         drawable_width, drawable_height = self._drawable_area()
         scale_x: float = drawable_width / max(range_x, 1)
         scale_y: float = drawable_height / max(range_y, 1)
         return min(scale_x, scale_y)
-    
-    
+
     def _scaled_position(self, x: int, y: int) -> tuple[int, int]:
         min_x, max_x, min_y, max_y = self._coordinate_boundaries()
         range_x: int = max_x - min_x
@@ -69,16 +66,13 @@ class Visualizer:
 
     def _draw_connections(self) -> None:
         for connection in self.graph.connections.values():
-            x1, y1 = self._scaled_position(connection.zone1.xaxis, connection.zone1.yaxis)
-            x2, y2 = self._scaled_position(connection.zone2.xaxis, connection.zone2.yaxis)
+            x1, y1 = self._scaled_position(
+                connection.zone1.xaxis, connection.zone1.yaxis
+            )
+            x2, y2 = self._scaled_position(
+                connection.zone2.xaxis, connection.zone2.yaxis
+            )
             pygame.draw.line(self.screen, (180, 180, 180), (x1, y1), (x2, y2), 2)
-
-    def _draw_zones(self) -> None:
-        for zone in self.graph.zones.values():
-            x, y = self._scaled_position(zone.xaxis, zone.yaxis)
-            color = self.RGB_COLOR_MAP.get(zone.color, (120, 120, 120))
-            pygame.draw.circle(self.screen, color, (x, y), 10)
-            pygame.draw.circle(self.screen, (0, 0, 0), (x, y), 18, 2)
 
     def _draw_drone_marker(self, x: int, y: int) -> None:
         points: list[tuple[int, int]] = [
@@ -87,78 +81,125 @@ class Visualizer:
             (x - 7, y + 7),
         ]
         pygame.draw.polygon(self.screen, (0, 0, 255), points)
-    
-    
-    def _draw_drone_at_zone(self, drone_id: str, zone_name: str) -> None:
+
+    def _draw_drone_at_zone(
+        self,
+        drone_id: str,
+        zone_name: str,
+        index: int = 0,
+    ) -> None:
         zone = self.graph.zones[zone_name]
         x, y = self._scaled_position(zone.xaxis, zone.yaxis)
+        offset = 10
+        x += (index % 3 - 1) * offset
+        y += (index // 3) * offset
         self._draw_drone_marker(x, y)
-    
-    
-    def _draw_drone_on_connection(self, drone_id: str, connection_id: str) -> None:
+
+    def _draw_zones(self) -> None:
+        for zone in self.graph.zones.values():
+            x, y = self._scaled_position(zone.xaxis, zone.yaxis)
+            color = self.RGB_COLOR_MAP.get(zone.color, (120, 120, 120))
+
+            pygame.draw.circle(self.screen, color, (x, y), 10)
+            pygame.draw.circle(self.screen, (0, 0, 0), (x, y), 18, 2)
+
+    def _draw_drone_on_connection(
+        self,
+        drone_id: str,
+        connection_id: str,
+        index: int = 0,
+    ) -> None:
         connection = self.graph.connections[connection_id]
-    
+
         x1, y1 = self._scaled_position(connection.zone1.xaxis, connection.zone1.yaxis)
         x2, y2 = self._scaled_position(connection.zone2.xaxis, connection.zone2.yaxis)
-    
+
         mid_x: int = (x1 + x2) // 2
         mid_y: int = (y1 + y2) // 2
-    
+
+        offset = 10
+        mid_x += (index % 3 - 1) * offset
+        mid_y += (index // 3) * offset
+
         self._draw_drone_marker(mid_x, mid_y)
-    
-    
+
+    def _draw_drones_grouped(self, frame: dict[str, str]) -> None:
+        grouped: dict[str, list[str]] = {}
+
+        for drone_id, location in frame.items():
+            grouped.setdefault(location, []).append(drone_id)
+
+        for location, drone_ids in grouped.items():
+            for index, drone_id in enumerate(drone_ids):
+                if location in self.graph.zones:
+                    self._draw_drone_at_zone(drone_id, location, index)
+                elif location in self.graph.connections:
+                    self._draw_drone_on_connection(drone_id, location, index)
+
     def _get_position(self, location: str) -> tuple[int, int]:
         if location in self.graph.zones:
             zone = self.graph.zones[location]
-            return self._scaled_position(zone.xaxis, zone.yaxis) 
+            return self._scaled_position(zone.xaxis, zone.yaxis)
         elif location in self.graph.connections:
-            connection = self.graph.connections[location]    
-            x1, y1 = self._scaled_position(connection.zone1.xaxis, connection.zone1.yaxis)
-            x2, y2 = self._scaled_position(connection.zone2.xaxis, connection.zone2.yaxis) 
-            return (x1 + x2) // 2, (y1 + y2) // 2 
+            connection = self.graph.connections[location]
+            x1, y1 = self._scaled_position(
+                connection.zone1.xaxis, connection.zone1.yaxis
+            )
+            x2, y2 = self._scaled_position(
+                connection.zone2.xaxis, connection.zone2.yaxis
+            )
+            return (x1 + x2) // 2, (y1 + y2) // 2
         return (0, 0)
 
     def _draw_drones_interpolated(
-        self,
-        frame_a: dict[str, str],
-        frame_b: dict[str, str],
-        progress: float
+        self, frame_a: dict[str, str], frame_b: dict[str, str], progress: float
     ) -> None:
         for drone_id in frame_a:
             loc_a = frame_a[drone_id]
             loc_b = frame_b.get(drone_id, loc_a)
-    
+
             x1, y1 = self._get_position(loc_a)
             x2, y2 = self._get_position(loc_b)
-    
+
             x = int(x1 + (x2 - x1) * progress)
             y = int(y1 + (y2 - y1) * progress)
-    
-            self._draw_drone_marker(x, y)
 
+            self._draw_drone_marker(x, y)
 
     def run(self) -> None:
         frame_index: int = 0
         progress: float = 0.0
-        speed: float = 1.5 
+        speed: float = 1.5
+
         while self.running:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    self.running = False    
-            time = self.clock.tick(60) / 1000 
+                    self.running = False
+
+            time = self.clock.tick(60) / 1000
             progress += time * speed
+
             self.screen.fill((245, 245, 245))
             self._draw_connections()
             self._draw_zones()
-            if len(self.frames) > 1 and frame_index < len(self.frames) - 1:
-                self._draw_drones_interpolated(
-                    self.frames[frame_index],
-                    self.frames[frame_index + 1],
-                    progress
-                )
+
+            if self.frames:
+                if frame_index < len(self.frames) - 1:
+                    self._draw_drones_interpolated(
+                        self.frames[frame_index],
+                        self.frames[frame_index + 1],
+                        progress,
+                    )
+                else:
+                    self._draw_drones_grouped(self.frames[frame_index])
+
             pygame.display.flip()
+
             if progress >= 1.0:
                 progress = 0.0
-                frame_index += 1
-    
+                if frame_index < len(self.frames) - 2:
+                    frame_index += 1
+                elif self.frames:
+                    frame_index = len(self.frames) - 1
+
         pygame.quit()
