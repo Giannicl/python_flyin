@@ -1,5 +1,5 @@
 from models import Zone, Connection, Graph
-from typing import Dict, List
+from typing import Dict, List, Any
 
 
 def validate_zone_type(zone_type: str) -> None:
@@ -69,12 +69,34 @@ def validate_required_zones(graph: Graph) -> None:
         )
 
 
-def validate_nb_drones(nb_drones: int) -> None:
-    if nb_drones <= 0:
+def validate_nb_drones(nb_drones: int | Any) -> int:
+    try:
+        value = int(nb_drones)
+    except ValueError:
+        raise ValueError("[validate_nb_drones] must be numeric")
+    if value <= 0:
         raise ValueError(
             f"[validate_nb_drones] nb_drones must be present as a positive integer, got {nb_drones}"
         )
+    return value
 
+            
+def validate_connection_format(connection_id: str) -> tuple[str, str]:
+    if "-" not in connection_id:
+        raise ValueError(
+            "[parse_connection_zones] Connection must use zone1-zone2 format."
+        )
+    connection_parts: list[str] = connection_id.split("-")
+    if len(connection_parts) != 2:
+        raise ValueError(
+            "[parse_connection_zones] Connection must contain exactly two zones."
+        )
+    zone1, zone2 = connection_parts
+    if not zone1 or not zone2:
+        raise ValueError(
+            "[parse_connection_zones] Connection zones cannot be empty."
+        )
+    return zone1, zone2
 
 def initialise_obj(elements: Dict, key: str, value: int | str) -> None:
     elements[key] = value
@@ -133,22 +155,17 @@ def zone_instantiator(line: str) -> Dict:
 def connection_instatiator(line: str) -> Dict:
     elements: Dict = {}
     parts: List[str] = line.split(" ", 2)
-    size_parts: int = len(parts)
+    if len(parts) < 2:
+        raise ValueError("[connection_instatiator] Invalid connection format.")
 
-    zone1: str
-    zone2: str
-    zone1, zone2 = parts[1].split("-")
-
+    zone1, zone2 = validate_connection_format(parts[1])
     initialise_obj(elements, "id", parts[1])
     initialise_obj(elements, "zone1", zone1)
     initialise_obj(elements, "zone2", zone2)
-
-    if size_parts > 2 and "[" in line and "=" in line:
+    if len(parts) > 2 and "[" in line and "=" in line:
         meta_data: List[str] = parts[2][1:-1].split(" ")
         initialise_metadata(elements, meta_data)
-
     return elements
-
 
 def create_zone(zone_elements: Dict) -> Zone:
     validate_capacity(zone_elements.get("max_drones", 1), "max_drones")
@@ -192,7 +209,9 @@ def parser(filename: str) -> Graph:
             parts: List[str] = line.split()
 
             if parts[0] == "nb_drones:":
-                graph.nb_drones = int(parts[1])
+                if len(parts) != 2:
+                    raise ValueError("[parser] Invalid nb_drones format.")
+                graph.nb_drones = validate_nb_drones(parts[1])
 
             if "hub" in parts[0]:
                 zone_elements: Dict = zone_instantiator(line)
@@ -206,8 +225,8 @@ def parser(filename: str) -> Graph:
                 validate_unique_input(graph.connections, connection_elements["id"])
                 connection: Connection = create_connection(connection_elements, graph)
                 graph.create_graph(connection)
-
-    validate_nb_drones(graph.nb_drones)
+    if graph.nb_drones == 0:
+        raise ValueError("[parser] Missing or invalid nb_drones.")
     validate_required_zones(graph)
     return graph
 

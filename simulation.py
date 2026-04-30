@@ -88,12 +88,6 @@ class Simulation:
             return False
         return len(self.zone_occupancy.get(zone.name, [])) >= zone.max_drones
 
-    def _is_connection_at_capacity(self, connection: Connection) -> bool:
-        return (
-            len(self.connection_occupancy.get(connection.id, []))
-            >= connection.max_link_capacity
-        )
-
     def _remove_from_current_zone(self, drone: Drone) -> None:
         current_zone: Zone | None = drone.current_zone
         if current_zone is None:
@@ -206,7 +200,6 @@ class Simulation:
         connection: Connection = self._get_transit_connection(drone)
         drone.remaining_transit_turns -= 1
         if drone.remaining_transit_turns > 0:
-            self.turn_output.append(f"{drone.drone_id}-{connection.id}")
             return
         next_zone: Zone = self._get_transit_destination(drone, connection)
         self._release_connection(drone, connection)
@@ -226,10 +219,11 @@ class Simulation:
             arrival_turn: int = self._arrival_turn(next_zone)
             if not self._has_arrival_capacity(
                 next_zone, arrival_turn
-            ) or self._is_connection_at_capacity(connection):
+            ):
                 self._handle_blocked_drone(drone)
                 return
             self._reserve_arrival(next_zone, arrival_turn)
+            self._reserve_connection(connection)
             self._remove_from_current_zone(drone)
             self._move_drone_through_connection(drone, connection, next_zone)
         else:
@@ -255,8 +249,9 @@ class Simulation:
     def _has_arrival_capacity(self, zone: Zone, arrival_turn: int) -> bool:
         if zone.zone_type == "end":
             return True
+        current_occupancy: int = len(self.zone_occupancy.get(zone.name, []))
         reserved_occupancy: int = self._reserved_arrivals(zone, arrival_turn)
-        return reserved_occupancy < zone.max_drones
+        return current_occupancy + reserved_occupancy < zone.max_drones
 
     def _colorize(self, text: str, color: str) -> str:
         rgb = self.RGB_COLOR_MAP.get(color)
@@ -287,7 +282,8 @@ class Simulation:
     def move_drones(self) -> None:
         self.turn_output = []
         self.turn_connection_usage = {}
-        for drone in self.drones:
+        drones_ordered: List[Drone] = sorted(self.drones, key=lambda drone: len(drone.path))
+        for drone in drones_ordered:
             if not drone.path:
                 continue
             if drone.in_transit:
@@ -311,6 +307,16 @@ class Simulation:
                 continue
             self._process_move_drone(drone, connection, next_zone)
 
+    def _all_at_goal(self, drones: List[Drone], zones: Dict[str, Zone]) -> bool:
+        end_zone = None
+        for zone in zones.values():
+            if zone.zone_type == "end":
+                end_zone = zone
+                break
+        if end_zone is None:
+            raise ValueError("[_all_at_goal] No end zone found")
+        return all(drone.current_zone == end_zone for drone in drones)
+
     def output(self) -> None:
         if not self.turn_output:
             return
@@ -322,7 +328,7 @@ class Simulation:
     def run(self) -> None:
         self._path_initialisor()
         self._record_frame()
-        while any(drone.path for drone in self.drones):
+        while not self._all_at_goal(self.drones, self.graph.zones):
             self.turns += 1
             self.turn_output = []
             self.move_drones()

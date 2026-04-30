@@ -104,8 +104,8 @@ class Drone:
             self.path.append(item)
         self.current_zone = path[0]
 
-    def __str__(self) -> None:
+    def __str__(self) -> str:
         return f"{self.drone_id}"
 
-    def __repr__(self) -> None:
+    def __repr__(self) -> str:
         return f"{self.drone_id}"

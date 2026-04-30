@@ -10,7 +10,6 @@ def main() -> None:
         type=str,
         help="Path to the map file",
     )
-
     parser.add_argument(
         "--visual",
         action="store_true",
@@ -25,6 +24,7 @@ def main() -> None:
         sim: Simulation = Simulation(args.map_file)
         sim.capacity_info_enabled = args.capacity_info
         sim.run()
+        print(f"Completed in {sim.turns} turns")
         if args.visual:
             visualizer: Visualizer = Visualizer(sim.graph, sim.frames)
             visualizer.run()

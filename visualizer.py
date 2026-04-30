@@ -38,6 +38,8 @@ class Visualizer:
         pygame.display.set_caption("Fly-in Drone Simulation")
         self.clock: pygame.time.Clock = pygame.time.Clock()
         self.running: bool = True
+        self.paused: bool = False
+        self.speed: float = 1.5
 
     def _coordinate_boundaries(self) -> tuple[int, int, int, int]:
         min_x: int = min(zone.xaxis for zone in self.graph.zones.values())
@@ -123,19 +125,6 @@ class Visualizer:
 
         self._draw_drone_marker(mid_x, mid_y)
 
-    def _draw_drones_grouped(self, frame: dict[str, str]) -> None:
-        grouped: dict[str, list[str]] = {}
-
-        for drone_id, location in frame.items():
-            grouped.setdefault(location, []).append(drone_id)
-
-        for location, drone_ids in grouped.items():
-            for index, drone_id in enumerate(drone_ids):
-                if location in self.graph.zones:
-                    self._draw_drone_at_zone(drone_id, location, index)
-                elif location in self.graph.connections:
-                    self._draw_drone_on_connection(drone_id, location, index)
-
     def _get_position(self, location: str) -> tuple[int, int]:
         if location in self.graph.zones:
             zone = self.graph.zones[location]
@@ -152,54 +141,111 @@ class Visualizer:
         return (0, 0)
 
     def _draw_drones_interpolated(
-        self, frame_a: dict[str, str], frame_b: dict[str, str], progress: float
-    ) -> None:
-        for drone_id in frame_a:
-            loc_a = frame_a[drone_id]
-            loc_b = frame_b.get(drone_id, loc_a)
+            self,
+            frame_a: dict[str, str],
+            frame_b: dict[str, str],
+            progress: float,
+        ) -> None:
+            grouped: dict[str, list[str]] = {}
+        
+            for drone_id, location in frame_a.items():
+                grouped.setdefault(location, []).append(drone_id)
+        
+            for location, drone_ids in grouped.items():
+                for index, drone_id in enumerate(drone_ids):
+                    loc_a = frame_a[drone_id]
+                    loc_b = frame_b.get(drone_id, loc_a)
+        
+                    x1, y1 = self._get_position(loc_a)
+                    x2, y2 = self._get_position(loc_b)
+        
+                    x = int(x1 + (x2 - x1) * progress)
+                    y = int(y1 + (y2 - y1) * progress)
+        
+                    offset = 15
+                    x += (index % 3 - 1) * offset
+                    y += (index // 3) * offset
+        
+                    self._draw_drone_marker(x, y)
 
-            x1, y1 = self._get_position(loc_a)
-            x2, y2 = self._get_position(loc_b)
+    def _handle_events(self) -> dict[str, bool]:
+        commands = {
+            "restart": False,
+            "pause": False,
+            "speed_up": False,
+            "slow_down": False,
+            "quit": False,
+        }
 
-            x = int(x1 + (x2 - x1) * progress)
-            y = int(y1 + (y2 - y1) * progress)
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                commands["quit"] = True
+                self.running = False
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE:
+                    commands["restart"] = True
+                elif event.key == pygame.K_p:
+                    commands["pause"] = True
+                elif event.key == pygame.K_UP:
+                    commands["speed_up"] = True
+                elif event.key == pygame.K_DOWN:
+                    commands["slow_down"] = True
 
-            self._draw_drone_marker(x, y)
-
+        return commands
+    def _update_progress(self, progress: float, speed: float) -> float:
+        time = self.clock.tick(60) / 1000
+        return progress + time * speed
+    
+    
+    def _draw_frame(self, frame_index: int, progress: float) -> None:
+        self.screen.fill((245, 245, 245))
+        self._draw_connections()
+        self._draw_zones()
+    
+        if self.frames:
+            if frame_index < len(self.frames) - 1:
+                self._draw_drones_interpolated(
+                    self.frames[frame_index],
+                    self.frames[frame_index + 1],
+                    progress,
+                )
+            else:
+                self._draw_drones_interpolated(
+                    self.frames[frame_index],
+                    self.frames[frame_index],
+                    0.0,
+                )
+    
+        pygame.display.flip()
+    
+    
+    def _advance_frame(self, frame_index: int, progress: float) -> tuple[int, float]:
+        if progress < 1.0:
+            return frame_index, progress 
+        progress = 0.0 
+        if frame_index < len(self.frames) - 2:
+            frame_index += 1
+        elif self.frames:
+            frame_index = len(self.frames) - 1 
+        return frame_index, progress
+    
     def run(self) -> None:
         frame_index: int = 0
         progress: float = 0.0
-        speed: float = 1.5
-
+    
         while self.running:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    self.running = False
-
-            time = self.clock.tick(60) / 1000
-            progress += time * speed
-
-            self.screen.fill((245, 245, 245))
-            self._draw_connections()
-            self._draw_zones()
-
-            if self.frames:
-                if frame_index < len(self.frames) - 1:
-                    self._draw_drones_interpolated(
-                        self.frames[frame_index],
-                        self.frames[frame_index + 1],
-                        progress,
-                    )
-                else:
-                    self._draw_drones_grouped(self.frames[frame_index])
-
-            pygame.display.flip()
-
-            if progress >= 1.0:
+            commands = self._handle_events() 
+            if commands["restart"]:
+                frame_index = 0
                 progress = 0.0
-                if frame_index < len(self.frames) - 2:
-                    frame_index += 1
-                elif self.frames:
-                    frame_index = len(self.frames) - 1
-
+            if commands["pause"]:
+                self.paused = not self.paused
+            if commands["speed_up"]:
+                self.speed *= 1.2
+            if commands["slow_down"]:
+                self.speed *= 0.8
+            if not self.paused:
+                progress = self._update_progress(progress, self.speed)
+                frame_index, progress = self._advance_frame(frame_index, progress)
+            self._draw_frame(frame_index, progress)
         pygame.quit()
