@@ -29,7 +29,9 @@ def main() -> None:
             visualizer: Visualizer = Visualizer(sim.graph, sim.frames)
             visualizer.run()
     except ValueError as e:
-        print(f"Error: {e}")
+        print(f"Invalid input: {e}")
+    except FileNotFoundError as e:
+        print(f"File not found: {e}")
     except Exception as e:
         print(f"Unknow error: {e}")
 

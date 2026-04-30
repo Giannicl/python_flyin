@@ -6,6 +6,17 @@ from heapq import heappush, heappop
 def _reconstruct_path(
     came_from: Dict[str, Zone], start: Zone, goal: Zone
 ) -> List[Zone]:
+    """Reconstructs the path from start to goal using the came_from map.
+
+        Args:
+            came_from: Dictionary mapping each zone name to the zone it was
+                reached from during pathfinding.
+            start: The starting zone.
+            goal: The destination zone.
+        
+        Returns:
+            An ordered list of zones from start to goal.
+    """
     path: List[Zone] = []
     current: Zone = goal
     while current != start:
@@ -23,6 +34,19 @@ def _valid_next_zone(
     best_cost: Dict[str, int],
     new_total_cost: int,
 ) -> bool:
+    """Checks whether a neighbouring zone is a valid next step in pathfinding.
+
+        Args:
+            neighbour_zone: The zone to evaluate.
+            goal: The destination zone.
+            visited: Set of already visited zone names.
+            full_zones: Set of zone names that are at full capacity.
+            best_cost: Dictionary mapping zone names to their current best known cost.
+            new_total_cost: The cost to reach the neighbour zone via the current path.
+        
+        Returns:
+            True if the zone is a valid next step, otherwise False.
+    """
     neighbour_name: str = neighbour_zone.name
     return (
         neighbour_name not in visited
@@ -38,6 +62,20 @@ def _valid_next_zone(
 def _initialise_finder(
     start: Zone, full_zones: set[str] | None
 ) -> Tuple[Dict[str, int], Dict[str, Zone], Set[str], Set[str], List[Tuple[int, Zone]]]:
+    """Initialises the data structures needed for the pathfinding algorithm.
+    
+    Args:
+        start: The starting zone.
+        full_zones: Set of zone names that are at full capacity, or None.
+    
+    Returns:
+        A tuple containing:
+            - best_cost: Dictionary mapping zone names to their best known cost.
+            - came_from: Dictionary mapping zone names to their predecessor zone.
+            - visited: Empty set for tracking visited zones.
+            - full_zones: Initialised set of full zone names.
+            - queue: Priority queue initialised with the start zone.
+    """   
     best_cost: Dict[str, int] = {start.name: 0}
     came_from: Dict[str, Zone] = {start.name: start}
     visited: Set[str] = set()
@@ -53,6 +91,19 @@ def path_finder(
     best_cost, came_from, visited, full_zones, queue = _initialise_finder(
         start, full_zones
     )
+    """Finds the lowest cost path from start to goal using Dijkstra's algorithm.
+
+        Args:
+            graph: The navigation graph containing zones and connections.
+            start: The starting zone.
+            goal: The destination zone.
+            full_zones: Optional set of zone names currently at full capacity
+                that should be avoided. Defaults to None.
+        
+        Returns:
+            An ordered list of zones from start to goal if a path exists,
+            otherwise None.
+    """
     if full_zones is None:
         full_zones = set()
     queue = [(0, start)]
