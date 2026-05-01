@@ -4,6 +4,11 @@ import argparse
 
 
 def main() -> None:
+    """Entry point for the Fly-in drone routing simulation.
+
+    Parses command-line arguments, runs the simulation, and optionally
+    launches the graphical visualizer.
+    """
     parser = argparse.ArgumentParser(description="Fly-in Drone Simulation")
     parser.add_argument(
         "map_file",
@@ -16,7 +21,8 @@ def main() -> None:
         help="Show graphical visualization after the terminal simulation",
     )
     parser.add_argument(
-        "--capacity-info", action="store_true", help="Show capacity usage per turn"
+        "--capacity-info", action="store_true",
+        help="Show capacity usage per turn"
     )
     args = parser.parse_args()
 

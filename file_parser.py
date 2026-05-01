@@ -4,13 +4,13 @@ from typing import Dict, List, Any
 
 def validate_zone_type(zone_type: str) -> None:
     """Validates that a zone type is one of the accepted values.
-    
-        Args:
-            zone_type: The zone type string to validate.
-    
-        Raises:
-            ValueError: If the zone type is not one of 'start', 'end', 'normal',
-            'restricted', 'priority', or 'blocked'.
+
+    Args:
+        zone_type: The zone type string to validate.
+
+    Raises:
+        ValueError: If the zone type is not one of 'start', 'end', 'normal',
+        'restricted', 'priority', or 'blocked'.
     """
     valid_zone_types: set[str] = {
         "start",
@@ -21,52 +21,58 @@ def validate_zone_type(zone_type: str) -> None:
         "blocked",
     }
     if zone_type not in valid_zone_types:
-        raise ValueError(f"[validate_zone_type] Invalid zone type: {zone_type}.")
+        raise ValueError("[validate_zone_type] "
+                         f"Invalid zone type: {zone_type}.")
 
 
 def validate_capacity(value: int, key: str) -> None:
     """Validates that a capacity value is a positive integer.
-    
-        Args:
-            value: The capacity value to validate.
-            key: The name of the field being validated, used in the error message.
-    
-        Raises:
-            ValueError: If the value is not a positive integer.
+
+    Args:
+        value: The capacity value to validate.
+        key: The name of the field being validated, used in the error message.
+
+    Raises:
+        ValueError: If the value is not a positive integer.
     """
     if value <= 0:
         raise ValueError(
-            f"[validate_capacity] {key} must be a positive integer, got {value}."
+            f"[validate_capacity] {key} "
+            f"must be a positive integer, got {value}."
         )
 
 
 def validate_unique_input(
-    graph_elements: Dict,
+    graph_elements: Dict[str, Any],
     name_or_id: str,
 ) -> None:
-    """Validates that a zone name or connection ID has not already been defined.
-    
-        Also checks for duplicate connections in reverse order (e.g., 'a-b' and 'b-a').
-    
-        Args:
-            graph_elements: Dictionary of already registered zones or connections.
-            name_or_id: The zone name or connection ID to check.
-    
-        Raises:
-            ValueError: If the name or ID is already present in graph_elements,
-                or if its reverse connection already exists.
+    """Validates that a zone name or
+    connection ID has not already been defined.
+
+    Also checks for duplicate connections
+    in reverse order (e.g., 'a-b' and 'b-a').
+
+    Args:
+        graph_elements: Dictionary of already registered zones or connections.
+        name_or_id: The zone name or connection ID to check.
+
+    Raises:
+        ValueError: If the name or ID is already present in graph_elements,
+            or if its reverse connection already exists.
     """
     name_zone1: str
     name_zone2: str
     id_reversed: str
     if name_or_id in graph_elements:
-        raise ValueError(f"[validate_unique_input] Duplicate element: {name_or_id}.")
+        raise ValueError("[validate_unique_input] "
+                         f"Duplicate element: {name_or_id}.")
     if "-" in name_or_id:
         name_zone1, name_zone2 = name_or_id.split("-")
         id_reversed = "-".join([name_zone2, name_zone1])
         if id_reversed in graph_elements:
             raise ValueError(
-                f"[validate_unique_input] Duplicate element reversed connection: {id_reversed}"
+                "[validate_unique_input] Duplicate element "
+                f"reversed connection: {id_reversed}"
             )
 
 
@@ -74,30 +80,34 @@ def validate_connection_zones_exist(
     graph: Graph, name_zone1: str, name_zone2: str
 ) -> None:
     """Validates that both zones referenced by a connection exist in the graph.
-    
-        Args:
-            graph: The navigation graph to check against.
-            name_zone1: The name of the first zone.
-            name_zone2: The name of the second zone.
-        
-        Raises:
-            ValueError: If either zone does not exist in the graph.
+
+    Args:
+        graph: The navigation graph to check against.
+        name_zone1: The name of the first zone.
+        name_zone2: The name of the second zone.
+
+    Raises:
+        ValueError: If either zone does not exist in the graph.
     """
     if name_zone1 not in graph.zones:
-        raise ValueError(f"[validate_connection_zones_exist] {name_zone1} does not exist.")
+        raise ValueError(
+            f"[validate_connection_zones_exist] {name_zone1} does not exist."
+        )
     if name_zone2 not in graph.zones:
-        raise ValueError(f"[validate_connection_zones_exist] {name_zone2} does not exist.")
+        raise ValueError(
+            f"[validate_connection_zones_exist] {name_zone2} does not exist."
+        )
 
 
 def validate_required_zones(graph: Graph) -> None:
     """Validates that the graph contains exactly one start and one end zone.
 
-        Args:
-            graph: The navigation graph to validate.
-        
-        Raises:
-            ValueError: If the graph does not contain exactly one start zone
-                and one end zone.
+    Args:
+        graph: The navigation graph to validate.
+
+    Raises:
+        ValueError: If the graph does not contain exactly one start zone
+            and one end zone.
     """
     start_count: int = 0
     end_count: int = 0
@@ -110,7 +120,8 @@ def validate_required_zones(graph: Graph) -> None:
 
     if start_count != 1:
         raise ValueError(
-            f"[validate_required_hubs] Expected 1 start zone, got {start_count}."
+            "[validate_required_hubs] Expected 1 start zone, "
+            f"got {start_count}."
         )
     if end_count != 1:
         raise ValueError(
@@ -121,14 +132,14 @@ def validate_required_zones(graph: Graph) -> None:
 def validate_nb_drones(nb_drones: int | Any) -> int:
     """Validates and returns the number of drones as a positive integer.
 
-        Args:
-            nb_drones: The value to validate, can be any type.
-        
-        Returns:
-            The validated number of drones as an integer.
-        
-        Raises:
-            ValueError: If the value is not numeric or not a positive integer.
+    Args:
+        nb_drones: The value to validate, can be any type.
+
+    Returns:
+        The validated number of drones as an integer.
+
+    Raises:
+        ValueError: If the value is not numeric or not a positive integer.
     """
     try:
         value = int(nb_drones)
@@ -136,23 +147,24 @@ def validate_nb_drones(nb_drones: int | Any) -> int:
         raise ValueError("[validate_nb_drones] must be numeric")
     if value <= 0:
         raise ValueError(
-            f"[validate_nb_drones] nb_drones must be present as a positive integer, got {nb_drones}"
+            "[validate_nb_drones] nb_drones must be present "
+            f"as a positive integer, got {nb_drones}"
         )
     return value
 
-            
+
 def validate_connection_format(connection_id: str) -> tuple[str, str]:
     """Validates and parses a connection ID into its two zone names.
 
-        Args:
-            connection_id: The connection string in 'zone1-zone2' format.
-        
-        Returns:
-            A tuple of (zone1_name, zone2_name).
-        
-        Raises:
-            ValueError: If the connection ID is not in the correct format,
-                does not contain exactly two zones, or either zone name is empty.
+    Args:
+        connection_id: The connection string in 'zone1-zone2' format.
+
+    Returns:
+        A tuple of (zone1_name, zone2_name).
+
+    Raises:
+        ValueError: If the connection ID is not in the correct format,
+            does not contain exactly two zones, or either zone name is empty.
     """
     if "-" not in connection_id:
         raise ValueError(
@@ -161,33 +173,36 @@ def validate_connection_format(connection_id: str) -> tuple[str, str]:
     connection_parts: list[str] = connection_id.split("-")
     if len(connection_parts) != 2:
         raise ValueError(
-            "[parse_connection_zones] Connection must contain exactly two zones."
+            "[parse_connection_zones] "
+            "Connection must contain exactly two zones."
         )
     zone1, zone2 = connection_parts
     if not zone1 or not zone2:
-        raise ValueError(
-            "[parse_connection_zones] Connection zones cannot be empty."
-        )
+        raise ValueError("[parse_connection_zones] "
+                         "Connection zones cannot be empty.")
     return zone1, zone2
 
-def initialise_obj(elements: Dict, key: str, value: int | str) -> None:
-    """Stores a key-value pair in the elements dictionary.
 
-        Args:
-            elements: The dictionary to update.
-            key: The key to store the value under.
-            value: The value to store.
+def initialise_obj(elements: Dict[str, int | str],
+                   key: str, value: int | str) -> None:
+    """Stores a key-value pair in the elements Dictionary.
+
+    Args:
+        elements: The Dictionary to update.
+        key: The key to store the value under.
+        value: The value to store.
     """
     elements[key] = value
 
 
-def initialise_metadata(elements: Dict, meta_data: List[str]) -> None:
-    """Parses and stores metadata key-value pairs into the elements dictionary.
+def initialise_metadata(elements: Dict[str, int | str],
+                        meta_data: List[str]) -> None:
+    """Parses and stores metadata key-value pairs into the elements Dictionary.
 
-        Args:
-            elements: The dictionary to update with parsed metadata.
-            meta_data: A list of strings in 'key=value' format representing
-                the metadata fields to parse.
+    Args:
+        elements: The Dictionary to update with parsed metadata.
+        meta_data: A list of strings in 'key=value' format representing
+            the metadata fields to parse.
     """
     for item in meta_data:
         parts: List[str] = item.split("=")
@@ -198,15 +213,15 @@ def initialise_metadata(elements: Dict, meta_data: List[str]) -> None:
         initialise_obj(elements, key, value)
 
 
-def initialise_zone_cost(elements: Dict) -> None:
+def initialise_zone_cost(elements: Dict[str, Any]) -> None:
     """Sets the movement cost of a zone based on its type.
 
-        Restricted zones cost 2 turns, blocked zones cost 0, and all
-        other zone types cost 1 turn.
-        
-        Args:
-            elements: The dictionary containing the zone's attributes,
-                including its zone_type. Updated in place with the zone_cost.
+    Restricted zones cost 2 turns, blocked zones cost 0, and all
+    other zone types cost 1 turn.
+
+    Args:
+        elements: The Dictionary containing the zone's attributes,
+            including its zone_type. Updated in place with the zone_cost.
     """
     zone_type: str = elements.get("zone_type", "normal")
     if zone_type == "restricted":
@@ -216,36 +231,38 @@ def initialise_zone_cost(elements: Dict) -> None:
     else:
         elements["zone_cost"] = 1
 
+
 def _parse_int(value: str, field: str) -> int:
     """Parses a string into an integer.
-    
-        Args:
-            value: The string to parse.
-            field: The name of the field being parsed, used in the error message.
-         
-        Returns:
-            The parsed integer value.
-         
-        Raises:
-            ValueError: If the string cannot be converted to an integer.
+
+    Args:
+        value: The string to parse.
+        field: The name of the field being parsed, used in the error message.
+
+    Returns:
+        The parsed integer value.
+
+    Raises:
+        ValueError: If the string cannot be converted to an integer.
     """
     try:
         return int(value)
     except ValueError:
         raise ValueError(f"[zone_instantiator] Invalid {field}: {value}")
 
-def zone_instantiator(line: str) -> Dict:
-    """Parses a zone definition line into a dictionary of zone attributes.
 
-        Args:
-            line: A raw line from the map file defining a zone.
-        
-        Returns:
-            A dictionary containing the zone's attributes including name,
-            xaxis, yaxis, zone_type, and zone_cost, plus any optional
-            metadata fields.
+def zone_instantiator(line: str) -> Dict[str, int | str]:
+    """Parses a zone definition line into a Dictionary of zone attributes.
+
+    Args:
+        line: A raw line from the map file defining a zone.
+
+    Returns:
+        A Dictionary containing the zone's attributes including name,
+        xaxis, yaxis, zone_type, and zone_cost, plus any optional
+        metadata fields.
     """
-    elements: Dict = {}
+    elements: Dict[str, int | str] = {}
     parts: List[str] = line.split(" ", 4)
     size_parts: int = len(parts)
 
@@ -269,20 +286,21 @@ def zone_instantiator(line: str) -> Dict:
     return elements
 
 
-def connection_instatiator(line: str) -> Dict:
-    """Parses a connection definition line into a dictionary of connection attributes.
+def connection_instatiator(line: str) -> Dict[str, str | Zone]:
+    """Parses a connection definition line
+    into a Dictionary of connection attributes.
 
-        Args:
-            line: A raw line from the map file defining a connection.
-    
-        Returns:
-            A dictionary containing the connection's attributes including
-            id, zone1, zone2, and any optional metadata fields.
-    
-        Raises:
-            ValueError: If the connection format is invalid.
+    Args:
+        line: A raw line from the map file defining a connection.
+
+    Returns:
+        A Dictionary containing the connection's attributes including
+        id, zone1, zone2, and any optional metadata fields.
+
+    Raises:
+        ValueError: If the connection format is invalid.
     """
-    elements: Dict = {}
+    elements: Dict[str, Any] = {}
     parts: List[str] = line.split(" ", 2)
     if len(parts) < 2:
         raise ValueError("[connection_instatiator] Invalid connection format.")
@@ -296,18 +314,19 @@ def connection_instatiator(line: str) -> Dict:
         initialise_metadata(elements, meta_data)
     return elements
 
-def create_zone(zone_elements: Dict) -> Zone:
-    """Creates and returns a Zone instance from a dictionary of attributes.
 
-        Args:
-            zone_elements: A dictionary containing the zone's attributes
-                as parsed from the map file.
-        
-        Returns:
-            A Zone instance initialised with the provided attributes.
-        
-        Raises:
-            ValueError: If the capacity is invalid or coordinates are missing.
+def create_zone(zone_elements: Dict[str, Any]) -> Zone:
+    """Creates and returns a Zone instance from a Dictionary of attributes.
+
+    Args:
+        zone_elements: A Dictionary containing the zone's attributes
+            as parsed from the map file.
+
+    Returns:
+        A Zone instance initialised with the provided attributes.
+
+    Raises:
+        ValueError: If the capacity is invalid or coordinates are missing.
     """
     validate_capacity(zone_elements.get("max_drones", 1), "max_drones")
     if "xaxis" not in zone_elements or "yaxis" not in zone_elements:
@@ -323,19 +342,22 @@ def create_zone(zone_elements: Dict) -> Zone:
     )
 
 
-def create_connection(connection_elements: Dict, graph: Graph) -> Connection:
-    """Creates and returns a Connection instance from a dictionary of attributes.
+def create_connection(connection_elements: Dict[str, Any],
+                      graph: Graph) -> Connection:
+    """Creates and returns a Connection
+    instance from a Dictionary of attributes.
 
-        Args:
-            connection_elements: A dictionary containing the connection's attributes
-                as parsed from the map file.
-            graph: The navigation graph used to look up the referenced zones.
-        
-        Returns:
-            A Connection instance linking the two specified zones.
-        
-        Raises:
-            ValueError: If either zone does not exist or the capacity is invalid.
+    Args:
+        connection_elements: A Dictionary containing
+        the connection's attributes
+        as parsed from the map file.
+        graph: The navigation graph used to look up the referenced zones.
+
+    Returns:
+        A Connection instance linking the two specified zones.
+
+    Raises:
+        ValueError: If either zone does not exist or the capacity is invalid.
     """
     name_zone1: str = connection_elements["zone1"]
     name_zone2: str = connection_elements["zone2"]
@@ -353,18 +375,18 @@ def create_connection(connection_elements: Dict, graph: Graph) -> Connection:
 
 def parser(filename: str) -> Graph:
     """Parses a map file and builds a Graph instance from its contents.
-    
-        Args:
-            filename: Path to the map file to parse.
-        
-        Returns:
-            A fully constructed Graph instance containing all zones,
-            connections, and drone count defined in the file.
-        
-        Raises:
-            ValueError: If the file is missing required fields, contains
-                invalid values, duplicate definitions, or malformed syntax.
-            FileNotFoundError: If the specified file does not exist.
+
+    Args:
+        filename: Path to the map file to parse.
+
+    Returns:
+        A fully constructed Graph instance containing all zones,
+        connections, and drone count defined in the file.
+
+    Raises:
+        ValueError: If the file is missing required fields, contains
+            invalid values, duplicate definitions, or malformed syntax.
+        FileNotFoundError: If the specified file does not exist.
     """
     graph: Graph = Graph()
 
@@ -382,16 +404,19 @@ def parser(filename: str) -> Graph:
                 graph.nb_drones = validate_nb_drones(parts[1])
 
             if "hub" in parts[0]:
-                zone_elements: Dict = zone_instantiator(line)
+                zone_elements: Dict[str, Any] = zone_instantiator(line)
                 validate_unique_input(graph.zones, zone_elements["name"])
                 zone: Zone = create_zone(zone_elements)
                 validate_zone_type(zone.zone_type)
                 graph.create_graph(zone)
 
             if parts[0] == "connection:":
-                connection_elements: Dict = connection_instatiator(line)
-                validate_unique_input(graph.connections, connection_elements["id"])
-                connection: Connection = create_connection(connection_elements, graph)
+                connection_elements: Dict[str,
+                                          Any] = connection_instatiator(line)
+                validate_unique_input(graph.connections,
+                                      connection_elements["id"])
+                connection: Connection = create_connection(
+                    connection_elements, graph)
                 graph.create_graph(connection)
     if graph.nb_drones == 0:
         raise ValueError("[parser] Missing or invalid nb_drones.")
